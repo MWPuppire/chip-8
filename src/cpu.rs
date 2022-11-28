@@ -10,16 +10,18 @@ const CLOCK_SPEED: f64 = 500.0;
 pub struct CPU {
     cycles_pending: f64,
     timers_pending: f64,
+
     pub pc: u16,
+    pub index: u16,
+    pub registers: enum_map::EnumMap<Register, u8>,
     pub memory: [u8; 4096],
     pub screen: Display,
-    pub registers: enum_map::EnumMap<Register, u8>,
     call_stack: Vec<u16>,
     pub delay_timer: u8,
     pub sound_timer: u8,
+
     input: [bool; 16],
     awaiting_key: Option<Register>,
-    pub index: u16,
 }
 
 impl CPU {
@@ -59,7 +61,7 @@ impl CPU {
         cpu
     }
 
-    pub fn clear_memory(&mut self) {
+    fn clear_memory(&mut self) {
         self.memory.fill(0);
         self.memory[0x50..0xA0].copy_from_slice(&font::FONT_SET);
     }
@@ -67,17 +69,14 @@ impl CPU {
     pub fn step(&mut self) -> Result<u32, Error> {
         let opcode = self.read_memory_word(self.pc)?;
         let inst = Instruction::lookup(opcode);
-        match inst.map(|inst| {
+        if let Some(inst) = inst {
             let cycles = inst.cycles;
             self.pc += 2;
             let extra_cycles = (inst.execute)(self, opcode);
-            cycles + extra_cycles
-        }) {
-            Some(cycles) => Ok(cycles),
-            None => {
-                println!("{}", opcode);
-                Err(Error::UnknownOpcode)
-            }
+            Ok(cycles + extra_cycles)
+        } else {
+            println!("Unknown opcode {:#06x} at memory {:#06x}", opcode, self.pc);
+            Err(Error::UnknownOpcode)
         }
     }
 
@@ -86,6 +85,7 @@ impl CPU {
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
         self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
+        self.timers_pending -= timer_diff as f64;
 
         if let Some(_) = self.awaiting_key {
             return Ok(());
@@ -103,6 +103,7 @@ impl CPU {
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
         self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
+        self.timers_pending -= timer_diff as f64;
 
         if let Some(_) = self.awaiting_key {
             return Ok(());
@@ -135,7 +136,7 @@ impl CPU {
         if let Some(pos) = self.call_stack.pop() {
             self.pc = pos;
         }
-        // TO-DO: raise error instead of no-op if no return address?
+        // TO-DO raise error instead of no-op if no return address?
     }
 
     pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
@@ -169,6 +170,7 @@ impl CPU {
 
     pub fn is_key_down(&self, key: u8) -> bool {
         if key > 0xF {
+            // TO-DO raise error instead of no-op if out-of-bounds?
             false
         } else {
             self.input[key as usize]
@@ -181,7 +183,7 @@ impl CPU {
 
     pub fn press_key(&mut self, key: u8) {
         if key > 0xF {
-            // TO-DO raise error instead of no-op if out-of-bounds
+            // TO-DO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = true;
             if let Some(reg) = self.awaiting_key {
@@ -193,7 +195,7 @@ impl CPU {
 
     pub fn release_key(&mut self, key: u8) {
         if key > 0xF {
-            // TO-DO raise error instead of no-op if out-of-bounds
+            // TO-DO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = false;
         }
@@ -208,5 +210,14 @@ impl CPU {
             self.memory[i + 0x200] = buf[i];
         }
         Ok(())
+    }
+
+    pub fn disassemble(&self, idx: u16) -> Option<&str> {
+        let word = self.read_memory_word(idx);
+        if let Ok(word) = word {
+            Instruction::lookup(word).map(|inst| inst.disassembly)
+        } else {
+            None
+        }
     }
 }

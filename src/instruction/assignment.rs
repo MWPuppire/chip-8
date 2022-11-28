@@ -19,7 +19,6 @@ pub fn inst_reg_dump(cpu: &mut CPU, inst: u16) -> u32 {
         let reg = Register::from_index(i).unwrap();
         cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg]).unwrap();
     }
-    cpu.index += max as u16;
     0
 }
 
@@ -29,7 +28,6 @@ pub fn inst_reg_load(cpu: &mut CPU, inst: u16) -> u32 {
         let reg = Register::from_index(i).unwrap();
         cpu.registers[reg] = cpu.read_memory_byte(cpu.index + i as u16).unwrap();
     }
-    cpu.index += max as u16;
     0
 }
 

@@ -35,6 +35,18 @@ impl Instruction {
                         cycles: 1,
                         disassembly: "(void) 0;",
                     })
+                } else if (opcode & 0x00F0) == 0x00B0 {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "scroll_up(N);",
+                    })
+                } else if (opcode & 0x00F0) == 0x00C0 {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "scroll_down(N);"
+                    })
                 } else if opcode == 0x00E0 {
                     Some(Instruction {
                         execute: inst_clear,
@@ -46,6 +58,36 @@ impl Instruction {
                         execute: inst_return,
                         cycles: 1,
                         disassembly: "return;",
+                    })
+                } else if opcode == 0x00FB {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "scroll_right();",
+                    })
+                } else if opcode == 0x00FC {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "scroll_left();",
+                    })
+                } else if opcode == 0x00FD {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "exit();",
+                    })
+                } else if opcode == 0x00FE {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "low_res();",
+                    })
+                } else if opcode == 0x00FF {
+                    Some(Instruction {
+                        execute: inst_nop, // TO-DO implement instruction
+                        cycles: 1,
+                        disassembly: "high_res();",
                     })
                 } else {
                     None
@@ -207,6 +249,11 @@ impl Instruction {
                     cycles: 1,
                     disassembly: "I = sprite_addr[Vx];",
                 }),
+                0x30 => Some(Instruction {
+                    execute: inst_nop, // TO-DO implement instruction
+                    cycles: 1,
+                    disassembly: "I = digit_addr[Vx];",
+                }),
                 0x33 => Some(Instruction {
                     execute: inst_bcd,
                     cycles: 1,
@@ -221,6 +268,16 @@ impl Instruction {
                     execute: inst_reg_load,
                     cycles: 1,
                     disassembly: "reg_load(Vx, &I);",
+                }),
+                0x75 => Some(Instruction {
+                    execute: inst_nop, // TO-DO implement instruction
+                    cycles: 1,
+                    disassembly: "persist_dump(Vx);",
+                }),
+                0x85 => Some(Instruction {
+                    execute: inst_nop, // TO-DO implement instruction
+                    cycles: 1,
+                    disassembly: "persist_load(Vx);",
                 }),
                 _ => None
             },

@@ -18,7 +18,7 @@ pub fn inst_return(cpu: &mut CPU, _: u16) -> u32 {
 
 pub fn inst_jump_v0(cpu: &mut CPU, inst: u16) -> u32 {
     let base = inst & 0xFFF;
-    let offset = cpu.registers[Register::V0] as u16;
-    cpu.pc = base + offset;
+    let reg = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
+    cpu.pc = base + cpu.registers[reg] as u16;
     0
 }

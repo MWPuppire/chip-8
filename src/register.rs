@@ -40,4 +40,43 @@ impl Register {
             _ => None
         }
     }
+
+    pub fn by_name(name: &str) -> Option<Register> {
+        let name = name.to_ascii_lowercase();
+        if name == "v0" {
+            Some(Register::V0)
+        } else if name == "v1" {
+            Some(Register::V1)
+        } else if name == "v2" {
+            Some(Register::V2)
+        } else if name == "v3" {
+            Some(Register::V3)
+        } else if name == "v4" {
+            Some(Register::V4)
+        } else if name == "v5" {
+            Some(Register::V5)
+        } else if name == "v6" {
+            Some(Register::V6)
+        } else if name == "v7" {
+            Some(Register::V7)
+        } else if name == "v8" {
+            Some(Register::V8)
+        } else if name == "v9" {
+            Some(Register::V9)
+        } else if name == "vA" {
+            Some(Register::VA)
+        } else if name == "vB" {
+            Some(Register::VB)
+        } else if name == "vC" {
+            Some(Register::VC)
+        } else if name == "vD" {
+            Some(Register::VD)
+        } else if name == "vE" {
+            Some(Register::VE)
+        } else if name == "vF" {
+            Some(Register::VF)
+        } else {
+            None
+        }
+    }
 }
