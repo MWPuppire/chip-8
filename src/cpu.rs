@@ -3,6 +3,7 @@ use crate::register::Register;
 use crate::display::Display;
 use crate::instruction::Instruction;
 use crate::font;
+use crate::log;
 
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
@@ -75,7 +76,7 @@ impl CPU {
             let extra_cycles = (inst.execute)(self, opcode);
             Ok(cycles + extra_cycles)
         } else {
-            println!("Unknown opcode {:#06x} at memory {:#06x}", opcode, self.pc);
+            log!("Unknown opcode {:#06x} at memory {:#06x}", opcode, self.pc);
             Err(Error::UnknownOpcode)
         }
     }
@@ -201,7 +202,7 @@ impl CPU {
         }
     }
 
-    pub fn load_rom(&mut self, buf: Vec<u8>) -> Result<(), Error> {
+    pub fn load_rom(&mut self, buf: &[u8]) -> Result<(), Error> {
         if buf.len() > 0xE00 {
             return Err(Error::InvalidFile);
         }

@@ -1,10 +1,12 @@
 use crate::common::Error;
 use crate::cpu::CPU;
 use crate::window::Window;
+use crate::log;
 
 use std::path::Path;
-use std::time::Instant;
 use std::fs;
+
+use instant::Instant;
 
 pub struct Emulator {
     cpu: CPU,
@@ -15,7 +17,7 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new() -> Result<Emulator, Error> {
+    pub fn try_new() -> Result<Emulator, Error> {
         Ok(Emulator {
             cpu: CPU::new(),
             has_rom: false,
@@ -49,19 +51,25 @@ impl Emulator {
         self.cpu.emulate_until(dt, &self.breakpoints[..])?;
         if self.cpu.should_beep() {
             // TO-DO actually beep
-            println!("beep!");
+            log!("beep!");
         }
         Ok(())
     }
 
-    pub fn load_rom(&mut self, file: &Path) -> Result<(), Error> {
+    pub fn load_rom_file(&mut self, file: &Path) -> Result<(), Error> {
         let contents = fs::read(file);
         if let Ok(contents) = contents {
-            self.cpu.load_rom(contents)?;
+            self.cpu.load_rom(&contents[..])?;
             self.has_rom = true;
             Ok(())
         } else {
             Err(Error::InvalidFile)
         }
+    }
+
+    pub fn load_rom(&mut self, contents: &[u8]) -> Result<(), Error> {
+        self.cpu.load_rom(contents)?;
+        self.has_rom = true;
+        Ok(())
     }
 }
