@@ -4,7 +4,9 @@ pub enum Error {
     Breakpoint,
     InvalidFile,
     OutOfBounds,
+    NoRomLoaded,
+    // variants not used by chip8-lib,
+    // but included for use in enclosing libraries
     WindowFailure,
     AudioFailure,
-    NoRomLoaded,
 }

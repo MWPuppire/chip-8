@@ -1,5 +1,5 @@
-use crate::register::Register;
-use crate::cpu::CPU;
+use crate::Register;
+use crate::CPU;
 use crate::display;
 
 pub fn inst_draw(cpu: &mut CPU, inst: u16) -> u32 {

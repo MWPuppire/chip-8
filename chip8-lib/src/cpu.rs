@@ -1,9 +1,8 @@
-use crate::common::Error;
-use crate::register::Register;
+use crate::Error;
+use crate::Register;
+use crate::Instruction;
 use crate::display::Display;
-use crate::instruction::Instruction;
 use crate::font;
-use crate::log;
 
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
@@ -76,7 +75,6 @@ impl CPU {
             let extra_cycles = (inst.execute)(self, opcode);
             Ok(cycles + extra_cycles)
         } else {
-            log!("Unknown opcode {:#06x} at memory {:#06x}", opcode, self.pc);
             Err(Error::UnknownOpcode)
         }
     }
@@ -128,12 +126,12 @@ impl CPU {
         self.sound_timer > 0
     }
 
-    pub fn call_routine(&mut self, pos: u16) {
+    pub(crate) fn call_routine(&mut self, pos: u16) {
         self.call_stack.push(self.pc);
         self.pc = pos;
     }
 
-    pub fn return_routine(&mut self) {
+    pub(crate) fn return_routine(&mut self) {
         if let Some(pos) = self.call_stack.pop() {
             self.pc = pos;
         }
@@ -178,7 +176,7 @@ impl CPU {
         }
     }
 
-    pub fn await_key(&mut self, post_reg: Register) {
+    pub(crate) fn await_key(&mut self, post_reg: Register) {
         self.awaiting_key = Some(post_reg);
     }
 

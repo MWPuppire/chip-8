@@ -1,5 +1,5 @@
-use crate::register::Register;
-use crate::cpu::CPU;
+use crate::Register;
+use crate::CPU;
 
 pub fn inst_oreq_register(cpu: &mut CPU, inst: u16) -> u32 {
     let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();

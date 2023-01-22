@@ -1,6 +1,6 @@
-use crate::display;
-use crate::common::Error;
-use crate::cpu::CPU;
+use chip8_lib::display;
+use chip8_lib::Error;
+use chip8_lib::CPU;
 
 const PIXEL_SCALE: minifb::Scale = minifb::Scale::X8;
 const WINDOW_WIDTH: u32 = display::SCREEN_WIDTH as u32;

@@ -1,5 +1,5 @@
-use crate::register::Register;
-use crate::cpu::CPU;
+use crate::Register;
+use crate::CPU;
 
 pub fn inst_goto(cpu: &mut CPU, inst: u16) -> u32 {
     cpu.pc = inst & 0xFFF;

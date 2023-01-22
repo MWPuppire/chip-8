@@ -1,7 +1,6 @@
-extern crate enum_map;
-extern crate rand;
-extern crate minifb;
 extern crate instant;
+extern crate minifb;
+extern crate chip8_lib;
 
 #[cfg(target_arch = "wasm32")]
 extern crate wasm_bindgen;
@@ -10,22 +9,12 @@ extern crate web_sys;
 #[cfg(target_arch = "wasm32")]
 extern crate js_sys;
 
-pub mod cpu;
-pub mod common;
-pub mod register;
-pub mod display;
-pub mod instruction;
-pub mod font;
 pub mod window;
 pub mod emulator;
 pub mod log;
 
 use crate::emulator::Emulator;
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::env;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
@@ -34,6 +23,9 @@ use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
+
+use std::path::Path;
+use std::env;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

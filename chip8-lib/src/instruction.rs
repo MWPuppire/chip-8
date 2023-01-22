@@ -1,4 +1,4 @@
-use crate::cpu::CPU;
+use crate::CPU;
 
 mod arithmetic;
 use arithmetic::*;
@@ -20,13 +20,13 @@ mod timers;
 use timers::*;
 
 pub struct Instruction {
-    pub execute: fn(&mut CPU, u16) -> u32,
-    pub cycles: u32,
+    pub(crate) execute: fn(&mut CPU, u16) -> u32,
+    pub(crate) cycles: u32,
     pub disassembly: &'static str,
 }
 
 impl Instruction {
-    pub fn lookup(opcode: u16) -> Option<Instruction> {
+    pub(crate) fn lookup(opcode: u16) -> Option<Instruction> {
         match opcode & 0xF000 {
             0x0000 => {
                 if opcode == 0x0000 {

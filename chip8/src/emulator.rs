@@ -1,5 +1,5 @@
-use crate::common::Error;
-use crate::cpu::CPU;
+use chip8_lib::Error;
+use chip8_lib::CPU;
 use crate::window::Window;
 use crate::log;
 
