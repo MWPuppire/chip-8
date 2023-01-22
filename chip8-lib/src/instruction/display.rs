@@ -13,8 +13,8 @@ pub fn inst_draw(cpu: &mut CPU, inst: u16) -> u32 {
         let byte = cpu.read_memory_byte(idx).unwrap();
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
-                flag |= cpu.screen.write_pixel((x + bit) % display::SCREEN_WIDTH,
-                    (y + i) % display::SCREEN_HEIGHT);
+                flag |= cpu.screen.write_pixel((x + bit) % display::SCREEN_WIDTH as u8,
+                    (y + i) % display::SCREEN_HEIGHT as u8);
             }
         }
     }

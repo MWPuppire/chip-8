@@ -1,6 +1,5 @@
 use chip8_lib::Error;
 use chip8_lib::CPU;
-use crate::window::Window;
 use crate::log;
 
 use std::path::Path;
@@ -12,7 +11,6 @@ pub struct Emulator {
     cpu: CPU,
     has_rom: bool,
     breakpoints: Vec<u16>,
-    window: Window,
     last_time: Instant,
 }
 
@@ -22,7 +20,6 @@ impl Emulator {
             cpu: CPU::new(),
             has_rom: false,
             breakpoints: vec!(),
-            window: Window::try_new()?,
             last_time: Instant::now(),
         })
     }
@@ -37,15 +34,6 @@ impl Emulator {
         let dt = self.step();
         if !self.has_rom {
             return Err(Error::NoRomLoaded);
-        }
-
-        self.window.render_display(&self.cpu);
-        for key in 0x0..0xF {
-            if self.window.key_pressed(key) {
-                self.cpu.press_key(key);
-            } else if self.window.key_released(key) {
-                self.cpu.release_key(key);
-            }
         }
 
         self.cpu.emulate_until(dt, &self.breakpoints[..])?;
@@ -71,5 +59,17 @@ impl Emulator {
         self.cpu.load_rom(contents)?;
         self.has_rom = true;
         Ok(())
+    }
+
+    pub fn display_buffer(&self, scale_factor: usize) -> Vec<u32> {
+        self.cpu.screen.to_buffer(scale_factor, scale_factor)
+    }
+
+    pub fn key_press(&mut self, key: u8, press: bool) {
+        if press {
+            self.cpu.press_key(key);
+        } else {
+            self.cpu.release_key(key);
+        }
     }
 }

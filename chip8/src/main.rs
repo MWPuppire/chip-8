@@ -1,6 +1,7 @@
 extern crate instant;
-extern crate minifb;
 extern crate chip8_lib;
+extern crate softbuffer;
+extern crate winit;
 
 #[cfg(target_arch = "wasm32")]
 extern crate wasm_bindgen;
@@ -9,79 +10,124 @@ extern crate web_sys;
 #[cfg(target_arch = "wasm32")]
 extern crate js_sys;
 
-pub mod window;
 pub mod emulator;
 pub mod log;
-
-use crate::emulator::Emulator;
-
-#[cfg(target_arch = "wasm32")]
-use std::rc::Rc;
-#[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
-
-use std::path::Path;
-use std::env;
+pub mod debug_window;
 
 #[cfg(not(target_arch = "wasm32"))]
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        log!("No ROM file provided");
-        return;
-    }
-
-    let mut emu = Emulator::try_new().unwrap();
-    let rom_path = Path::new(&args[1]);
-    emu.load_rom_file(rom_path).unwrap();
-    loop {
-        emu.update().unwrap();
-    }
-}
+mod desktop_frontend;
+#[cfg(not(target_arch = "wasm32"))]
+use desktop_frontend as frontend;
 
 #[cfg(target_arch = "wasm32")]
-fn main() -> Result<(), JsValue> {
-    let window = web_sys::window().unwrap();
-    let document = window.document().unwrap();
-    let rom_input = document.get_element_by_id("rom-file").unwrap()
-        .dyn_into::<web_sys::HtmlInputElement>()?;
-    let rom_input = Rc::new(rom_input);
+mod web_frontend;
+#[cfg(target_arch = "wasm32")]
+use web_frontend as frontend;
 
-    let emu = Rc::new(RefCell::new(Emulator::try_new().unwrap()));
+use softbuffer::GraphicsContext;
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::{ControlFlow, EventLoop};
 
-    let emu_captured = emu.clone();
-    let load_rom = Closure::wrap(Box::new(move |value| {
-        let buf = js_sys::ArrayBuffer::from(value);
-        let buf = js_sys::Uint8Array::new(&buf);
-        let vec = buf.to_vec();
-        emu_captured.borrow_mut().load_rom(&vec[..]).unwrap();
-    }) as Box<dyn FnMut(JsValue)>);
+use chip8_lib::Error;
+use crate::emulator::Emulator;
+use crate::debug_window::DebugWindow;
 
-    let rom_captured = rom_input.clone();
-    let input_callback = Closure::wrap(Box::new(move |_| {
-        let files = rom_captured.files().unwrap();
-        if files.length() == 0 {
-            return;
+pub const SCALE_FACTOR: usize = 8;
+
+fn main() {
+    let event_loop = EventLoop::new();
+    let window = frontend::create_window(&event_loop);
+    let mut graphics_context = unsafe {
+        GraphicsContext::new(&window, &window)
+    }.unwrap();
+    let mut running = true;
+    let mut emu = Emulator::try_new().unwrap();
+    let mut debug = DebugWindow::new();
+    frontend::load_rom_file(&mut emu).unwrap();
+
+    event_loop.run(move |event, target, control_flow| {
+        match event {
+            Event::MainEventsCleared => {
+                if running {
+                    let res = emu.update();
+                    match res {
+                        Err(Error::NoRomLoaded) => {
+                            log!("No rom loaded");
+                            if debug.is_open() {
+                                running = false;
+                            } else {
+                                *control_flow = ControlFlow::Exit;
+                            }
+                        },
+                        Err(Error::Breakpoint) => {
+                            debug.open(target);
+                            debug.put_text("Breakpoint reached");
+                            running = false;
+                        },
+                        Err(Error::UnknownOpcode) => {
+                            log!("Unknown opcode");
+                            *control_flow = ControlFlow::Exit;
+                        },
+                        _ => {},
+                    }
+                }
+                let buf = emu.display_buffer(SCALE_FACTOR);
+                graphics_context.set_buffer(&buf,
+                    (chip8_lib::display::SCREEN_WIDTH * SCALE_FACTOR) as u16,
+                    (chip8_lib::display::SCREEN_HEIGHT * SCALE_FACTOR) as u16
+                );
+            },
+            Event::WindowEvent {
+                event,
+                window_id,
+            } => {
+                if window_id == window.id() {
+                    match event {
+                        WindowEvent::CloseRequested => {
+                            *control_flow = ControlFlow::Exit;
+                        },
+                        WindowEvent::KeyboardInput {
+                            device_id: _,
+                            input,
+                            is_synthetic: _
+                        } => {
+                            // hex key - physical key
+                            // 1 2 3 C - 1 2 3 4
+                            // 4 5 6 D - Q W E R
+                            // 7 8 9 E - A S D F
+                            // A 0 B F - Z X C V
+                            use winit::event::{VirtualKeyCode, ElementState};
+                            let pressed = input.state == ElementState::Pressed;
+                            match input.virtual_keycode {
+                                Some(VirtualKeyCode::Key1) => emu.key_press(0x0, pressed),
+                                Some(VirtualKeyCode::Key2) => emu.key_press(0x1, pressed),
+                                Some(VirtualKeyCode::Key3) => emu.key_press(0x2, pressed),
+                                Some(VirtualKeyCode::Q)    => emu.key_press(0x3, pressed),
+                                Some(VirtualKeyCode::W)    => emu.key_press(0x4, pressed),
+                                Some(VirtualKeyCode::E)    => emu.key_press(0x5, pressed),
+                                Some(VirtualKeyCode::A)    => emu.key_press(0x6, pressed),
+                                Some(VirtualKeyCode::S)    => emu.key_press(0x7, pressed),
+                                Some(VirtualKeyCode::D)    => emu.key_press(0x8, pressed),
+                                Some(VirtualKeyCode::X)    => emu.key_press(0x9, pressed),
+                                Some(VirtualKeyCode::Z)    => emu.key_press(0xA, pressed),
+                                Some(VirtualKeyCode::C)    => emu.key_press(0xB, pressed),
+                                Some(VirtualKeyCode::Key4) => emu.key_press(0xC, pressed),
+                                Some(VirtualKeyCode::R)    => emu.key_press(0xD, pressed),
+                                Some(VirtualKeyCode::F)    => emu.key_press(0xE, pressed),
+                                Some(VirtualKeyCode::V)    => emu.key_press(0xF, pressed),
+                                _ => {},
+                            };
+                        },
+                        WindowEvent::DroppedFile(path) => {
+                            emu.load_rom_file(&path).unwrap();
+                        },
+                        _ => {},
+                    }
+                } else if debug.is_open() && window_id == debug.id() {
+                    debug.handle_event(event);
+                }
+            },
+            _ => {},
         }
-        let file = files.item(0).unwrap();
-        file.array_buffer().then(&load_rom);
-    }) as Box<dyn FnMut(JsValue)>);
-    rom_input.add_event_listener_with_callback("change", input_callback.as_ref().unchecked_ref())?;
-    input_callback.forget();
-
-    let update_cb: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
-    let update_captured = update_cb.clone();
-
-    *update_cb.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        emu.borrow_mut().update();
-        let window = web_sys::window().unwrap();
-        window.request_animation_frame(update_captured.borrow().as_ref().unwrap().as_ref().unchecked_ref());
-    }) as Box<dyn FnMut()>));
-    window.request_animation_frame(update_cb.borrow().as_ref().unwrap().as_ref().unchecked_ref())?;
-
-    Ok(())
+    });
 }

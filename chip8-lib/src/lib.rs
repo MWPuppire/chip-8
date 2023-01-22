@@ -1,3 +1,5 @@
+#![feature(iter_collect_into)]
+
 extern crate enum_map;
 extern crate rand;
 

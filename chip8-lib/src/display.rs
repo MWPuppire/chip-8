@@ -1,14 +1,14 @@
-pub const SCREEN_WIDTH: u8 = 64;
-pub const SCREEN_HEIGHT: u8 = 32;
+pub const SCREEN_WIDTH: usize = 64;
+pub const SCREEN_HEIGHT: usize = 32;
 
 pub struct Display {
-    buffer: [[bool; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize],
+    buffer: [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT],
 }
 
 impl Display {
     pub fn new() -> Display {
         Display {
-            buffer: [[false; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize],
+            buffer: [[false; SCREEN_WIDTH]; SCREEN_HEIGHT],
         }
     }
 
@@ -27,12 +27,21 @@ impl Display {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill([false; SCREEN_WIDTH as usize]);
+        self.buffer.fill([false; SCREEN_WIDTH]);
     }
 
-    pub fn to_buffer(&self) -> Vec<u32> {
-        self.buffer.iter().map(|row| row.map(|set|
-            if set { 0xFFFFFFFFu32 } else { 0x00000000u32 }
-        )).flatten().collect()
+    pub fn to_buffer(&self, scale_x: usize, scale_y: usize) -> Vec<u32> {
+        if scale_x == 0 || scale_y == 0 {
+            return vec![];
+        }
+        let mut out = vec![];
+        for row in self.buffer.iter() {
+            for _ in 0..scale_y {
+                row.into_iter().flat_map(|set|
+                    vec![if *set { 0xFFFFFFFFu32 } else { 0x00000000u32 }; scale_x].into_iter()
+                ).collect_into(&mut out);
+            }
+        }
+        out
     }
 }

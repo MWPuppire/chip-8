@@ -8,9 +8,11 @@ edition = "2021"
 [dependencies]
 chip8-lib.path = "../chip8-lib"
 instant = "0.1.12"
+softbuffer = "0.2.0"
+winit = "0.27.0"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-minifb = "0.23.0"
+# [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# minifb = "0.23.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # minifb = { version = "0.23.0", features = [ "web" ], default-features = false }
