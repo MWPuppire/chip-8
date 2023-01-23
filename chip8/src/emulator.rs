@@ -15,13 +15,13 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn try_new() -> Result<Emulator, Error> {
-        Ok(Emulator {
+    pub fn new() -> Emulator {
+        Emulator {
             cpu: CPU::new(),
             has_rom: false,
             breakpoints: vec!(),
             last_time: Instant::now(),
-        })
+        }
     }
 
     fn step(&mut self) -> f64 {

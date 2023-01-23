@@ -2,21 +2,23 @@ use std::rc::Rc;
 use std::sync::mpsc::channel;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use winit::event_loop:EventLoopWindowTarget;
+use winit::event_loop::EventLoopWindowTarget;
 use winit::window::{WindowBuilder, Window};
 use winit::platform::web::WindowBuilderExtWebSys;
 use winit::dpi::LogicalSize;
-use crate::Emulator
+use crate::Emulator;
 use crate::SCALE_FACTOR;
+use chip8_lib::Error;
 use chip8_lib::display::{SCREEN_WIDTH, SCREEN_HEIGHT};
+use std::borrow::BorrowMut;
 
 pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
-    let canvas = document.crate_element("canvas").unwrap()
+    let canvas = document.create_element("canvas").unwrap()
         .dyn_into::<web_sys::HtmlCanvasElement>().unwrap();
 
-    let body = document.body.unwrap();
+    let body = document.body().unwrap();
     body.append_child(&canvas).unwrap();
     WindowBuilder::new()
         .with_resizable(false)
@@ -32,7 +34,7 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let rom_input = document.get_element_by_id("rom-file").unwrap()
-        .dyn_into::<web_sys::HtmlInputElement>()?;
+        .dyn_into::<web_sys::HtmlInputElement>().unwrap();
     let rom_input = Rc::new(rom_input);
 
     let (sender, receiver) = channel();
@@ -57,7 +59,7 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
     rom_input.add_event_listener_with_callback(
         "change",
         input_callback.as_ref().unchecked_ref()
-    )?;
+    ).unwrap();
     input_callback.forget();
 
     Ok(receiver.recv().unwrap())

@@ -60,7 +60,7 @@ impl DebugWindow {
         let canvas = window.canvas();
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
-        let body = document.body.unwrap();
+        let body = document.body().unwrap();
         body.append_child(&canvas).unwrap();
     }
     #[cfg(not(target_arch = "wasm32"))]

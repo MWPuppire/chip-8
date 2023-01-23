@@ -41,7 +41,7 @@ fn main() {
         GraphicsContext::new(&window, &window)
     }.unwrap();
     let mut running = true;
-    let mut emu = Emulator::try_new().unwrap();
+    let mut emu = Emulator::new();
     let mut debug = DebugWindow::new();
     frontend::load_rom_file(&mut emu).unwrap();
 
