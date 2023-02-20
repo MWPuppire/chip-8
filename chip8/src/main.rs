@@ -41,9 +41,8 @@ fn main() {
         GraphicsContext::new(&window, &window)
     }.unwrap();
     let mut running = true;
-    let mut emu = Emulator::new();
     let mut debug = DebugWindow::new();
-    frontend::load_rom_file(&mut emu).unwrap();
+    let mut emu = frontend::load_rom_file().unwrap();
 
     event_loop.run(move |event, target, control_flow| {
         match event {
@@ -71,10 +70,12 @@ fn main() {
                         _ => {},
                     }
                 }
-                let buf = emu.display_buffer(SCALE_FACTOR);
+                let dpi_scale = window.scale_factor();
+                let full_scale = SCALE_FACTOR * dpi_scale as usize;
+                let buf = emu.display_buffer(full_scale);
                 graphics_context.set_buffer(&buf,
-                    (chip8_lib::display::SCREEN_WIDTH * SCALE_FACTOR) as u16,
-                    (chip8_lib::display::SCREEN_HEIGHT * SCALE_FACTOR) as u16
+                    (chip8_lib::display::SCREEN_WIDTH * full_scale) as u16,
+                    (chip8_lib::display::SCREEN_HEIGHT * full_scale) as u16
                 );
             },
             Event::WindowEvent {

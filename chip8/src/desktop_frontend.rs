@@ -19,7 +19,8 @@ pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
         .build(target).unwrap()
 }
 
-pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
+pub fn load_rom_file() -> Result<Emulator, Error> {
+    let mut emu = Emulator::new();
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         log!("No ROM file provided");
@@ -27,5 +28,5 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
     }
     let rom_path = Path::new(&args[1]);
     emu.load_rom_file(rom_path)?;
-    Ok(())
+    Ok(emu)
 }

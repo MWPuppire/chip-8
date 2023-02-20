@@ -8,9 +8,9 @@ use winit::platform::web::WindowBuilderExtWebSys;
 use winit::dpi::LogicalSize;
 use crate::Emulator;
 use crate::SCALE_FACTOR;
+use crate::log;
 use chip8_lib::Error;
 use chip8_lib::display::{SCREEN_WIDTH, SCREEN_HEIGHT};
-use std::borrow::BorrowMut;
 
 pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
     let window = web_sys::window().unwrap();
@@ -30,7 +30,7 @@ pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
         .build(target).unwrap()
 }
 
-pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
+pub fn load_rom_file() -> Result<Emulator, Error> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let rom_input = document.get_element_by_id("rom-file").unwrap()
@@ -40,11 +40,16 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
     let (sender, receiver) = channel();
 
     let load_rom = Closure::wrap(Box::new(move |value| {
+        let mut emu = Emulator::new();
         let buf = js_sys::ArrayBuffer::from(value);
         let buf = js_sys::Uint8Array::new(&buf);
         let vec = buf.to_vec();
-        emu.borrow_mut().load_rom(&vec[..]).unwrap();
-        sender.send(()).unwrap();
+        emu.load_rom(&vec[..]).unwrap();
+        sender.send(emu).unwrap();
+    }) as Box<dyn FnMut(JsValue)>);
+
+    let err_cb = Closure::wrap(Box::new(move |err| {
+        log!("{:?}", err);
     }) as Box<dyn FnMut(JsValue)>);
 
     let rom_captured = rom_input.clone();
@@ -54,7 +59,7 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
             return;
         }
         let file = files.item(0).unwrap();
-        file.array_buffer().then(&load_rom);
+        file.array_buffer().then(&load_rom).catch(&err_cb);
     }) as Box<dyn FnMut(JsValue)>);
     rom_input.add_event_listener_with_callback(
         "change",
@@ -62,5 +67,6 @@ pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
     ).unwrap();
     input_callback.forget();
 
-    Ok(receiver.recv().unwrap())
+    let out = receiver.recv();
+    Ok(out.unwrap())
 }
