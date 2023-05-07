@@ -7,6 +7,63 @@ use crate::font;
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "std")] {
+        use std::{vec, vec::Vec};
+
+        #[repr(transparent)]
+        struct CallStack {
+            stack: Vec<u16>,
+        }
+
+        impl CallStack {
+            fn new() -> Self {
+                CallStack {
+                    stack: vec![],
+                }
+            }
+            fn push(&mut self, addr: u16) {
+                self.stack.push(addr);
+            }
+            fn pop(&mut self) -> Option<u16> {
+                self.stack.pop()
+            }
+        }
+    } else {
+        const CALL_STACK_SIZE: usize = 64;
+
+        struct CallStack {
+            call_stack: [u16; CALL_STACK_SIZE],
+            call_stack_idx: usize,
+        }
+
+        impl CallStack {
+            fn new() -> Self {
+                CallStack {
+                    call_stack: [0; CALL_STACK_SIZE],
+                    call_stack_idx: 0,
+                }
+            }
+            fn push(&mut self, addr: u16) {
+                if self.call_stack_idx == CALL_STACK_SIZE {
+                    // TODO raise error instead of no-op if out of space?
+                    return;
+                }
+                self.call_stack[self.call_stack_idx] = addr;
+                self.call_stack_idx += 1;
+            }
+            fn pop(&mut self) -> Option<u16> {
+                if self.call_stack_idx == 0 {
+                    None
+                } else {
+                    self.call_stack_idx -= 1;
+                    Some(self.call_stack[self.call_stack_idx])
+                }
+            }
+        }
+    }
+}
+
 pub struct CPU {
     cycles_pending: f64,
     timers_pending: f64,
@@ -16,7 +73,7 @@ pub struct CPU {
     pub registers: enum_map::EnumMap<Register, u8>,
     pub memory: [u8; 4096],
     pub screen: Display,
-    call_stack: Vec<u16>,
+    call_stack: CallStack,
     pub delay_timer: u8,
     pub sound_timer: u8,
 
@@ -50,7 +107,7 @@ impl CPU {
                 Register::VE => 0,
                 Register::VF => 0,
             },
-            call_stack: vec!(),
+            call_stack: CallStack::new(),
             delay_timer: 0,
             sound_timer: 0,
             input: [false; 16],
@@ -132,10 +189,10 @@ impl CPU {
     }
 
     pub(crate) fn return_routine(&mut self) {
-        if let Some(pos) = self.call_stack.pop() {
-            self.pc = pos;
+        if let Some(addr) = self.call_stack.pop() {
+            self.pc = addr;
         }
-        // TO-DO raise error instead of no-op if no return address?
+        // TODO raise error instead of no-op if no return address?
     }
 
     pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
@@ -169,7 +226,7 @@ impl CPU {
 
     pub fn is_key_down(&self, key: u8) -> bool {
         if key > 0xF {
-            // TO-DO raise error instead of no-op if out-of-bounds?
+            // TODO raise error instead of no-op if out-of-bounds?
             false
         } else {
             self.input[key as usize]
@@ -182,7 +239,7 @@ impl CPU {
 
     pub fn press_key(&mut self, key: u8) {
         if key > 0xF {
-            // TO-DO raise error instead of no-op if out-of-bounds?
+            // TODO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = true;
             if let Some(reg) = self.awaiting_key {
@@ -194,7 +251,7 @@ impl CPU {
 
     pub fn release_key(&mut self, key: u8) {
         if key > 0xF {
-            // TO-DO raise error instead of no-op if out-of-bounds?
+            // TODO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = false;
         }

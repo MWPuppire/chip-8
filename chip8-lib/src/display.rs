@@ -1,6 +1,9 @@
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 
+#[cfg(feature = "std")]
+use std::{vec, vec::Vec};
+
 pub struct Display {
     buffer: [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT],
 }
@@ -30,16 +33,17 @@ impl Display {
         self.buffer.fill([false; SCREEN_WIDTH]);
     }
 
+    #[cfg(feature = "std")]
     pub fn to_buffer(&self, scale_x: usize, scale_y: usize) -> Vec<u32> {
         if scale_x == 0 || scale_y == 0 {
             return vec![];
         }
-        let mut out = vec![];
+        let mut out = Vec::with_capacity(scale_x * scale_y * SCREEN_WIDTH * SCREEN_HEIGHT);
         for row in self.buffer.iter() {
             for _ in 0..scale_y {
-                row.into_iter().flat_map(|set|
+                out.extend(row.into_iter().flat_map(|set|
                     vec![if *set { 0xFFFFFFFFu32 } else { 0x00000000u32 }; scale_x].into_iter()
-                ).collect_into(&mut out);
+                ));
             }
         }
         out

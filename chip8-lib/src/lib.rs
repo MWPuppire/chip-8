@@ -1,7 +1,10 @@
-#![feature(iter_collect_into)]
+#![no_std]
 
 extern crate enum_map;
 extern crate rand;
+extern crate cfg_if;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod cpu;
 pub mod common;

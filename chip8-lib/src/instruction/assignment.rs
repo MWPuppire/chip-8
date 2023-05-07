@@ -42,6 +42,6 @@ pub fn inst_sprite_addr_index(cpu: &mut CPU, inst: u16) -> u32 {
     let reg = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     let value = cpu.registers[reg] & 0xF;
     cpu.index = crate::font::SPRITE_ADDR[value as usize];
-    // TO-DO raise error instead of no-op if out of bounds?
+    // TODO raise error instead of no-op if out of bounds?
     0
 }

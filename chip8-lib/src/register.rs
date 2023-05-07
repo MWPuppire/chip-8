@@ -42,38 +42,37 @@ impl Register {
     }
 
     pub fn by_name(name: &str) -> Option<Register> {
-        let name = name.to_ascii_lowercase();
-        if name == "v0" {
+        if name == "v0" || name == "V0" {
             Some(Register::V0)
-        } else if name == "v1" {
+        } else if name == "v1" || name == "V1" {
             Some(Register::V1)
-        } else if name == "v2" {
+        } else if name == "v2" || name == "V2" {
             Some(Register::V2)
-        } else if name == "v3" {
+        } else if name == "v3" || name == "V3" {
             Some(Register::V3)
-        } else if name == "v4" {
+        } else if name == "v4" || name == "V4" {
             Some(Register::V4)
-        } else if name == "v5" {
+        } else if name == "v5" || name == "V5" {
             Some(Register::V5)
-        } else if name == "v6" {
+        } else if name == "v6" || name == "V6" {
             Some(Register::V6)
-        } else if name == "v7" {
+        } else if name == "v7" || name == "V7" {
             Some(Register::V7)
-        } else if name == "v8" {
+        } else if name == "v8" || name == "V8" {
             Some(Register::V8)
-        } else if name == "v9" {
+        } else if name == "v9" || name == "V9" {
             Some(Register::V9)
-        } else if name == "vA" {
+        } else if name == "va" || name == "vA" || name == "Va" || name == "VA" {
             Some(Register::VA)
-        } else if name == "vB" {
+        } else if name == "vb" || name == "vB" || name == "Vb" || name == "VB" {
             Some(Register::VB)
-        } else if name == "vC" {
+        } else if name == "vc" || name == "vC" || name == "Vc" || name == "VC" {
             Some(Register::VC)
-        } else if name == "vD" {
+        } else if name == "vd" || name == "vD" || name == "Vd" || name == "VD" {
             Some(Register::VD)
-        } else if name == "vE" {
+        } else if name == "ve" || name == "vE" || name == "Ve" || name == "VE" {
             Some(Register::VE)
-        } else if name == "vF" {
+        } else if name == "vf" || name == "vF" || name == "Vf" || name == "VF" {
             Some(Register::VF)
         } else {
             None

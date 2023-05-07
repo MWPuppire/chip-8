@@ -11,9 +11,11 @@ pub fn inst_bcd(cpu: &mut CPU, inst: u16) -> u32 {
 }
 
 pub fn inst_random(cpu: &mut CPU, inst: u16) -> u32 {
+    use rand::RngCore;
     let reg = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     let and = (inst & 0xFF) as u8;
-    cpu.registers[reg] = rand::random::<u8>() & and;
+    let mut rng = rand::rngs::OsRng;
+    cpu.registers[reg] = (rng.next_u32() as u8) & and;
     0
 }
 
