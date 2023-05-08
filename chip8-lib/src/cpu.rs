@@ -391,7 +391,7 @@ impl CPU {
             pc: self.pc,
             index: self.index,
             registers: self.registers,
-            memory: self.memory.clone(),
+            memory: self.memory,
             screen: self.screen.clone(),
             call_stack: self.call_stack.clone(),
             delay_timer: self.delay_timer,
