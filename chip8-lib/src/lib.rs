@@ -13,6 +13,6 @@ pub mod display;
 pub mod instruction;
 mod font;
 
-pub use common::Error;
+pub use common::{Error, Chip8Mode};
 pub use cpu::CPU;
 pub use register::Register;

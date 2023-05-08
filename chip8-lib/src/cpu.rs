@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, Chip8Mode};
 use crate::Register;
 use crate::instruction::Instruction;
 use crate::display::Display;
@@ -90,6 +90,7 @@ cfg_if::cfg_if! {
 pub struct CPU {
     cycles_pending: f64,
     timers_pending: f64,
+    mode: Chip8Mode,
 
     pub pc: u16,
     pub index: u16,
@@ -102,42 +103,42 @@ pub struct CPU {
 
     input: [bool; 16],
     awaiting_key: Option<Register>,
-    exited: bool,
+
+    #[cfg(feature = "cosmac")]
+    pub(crate) vblank_wait: bool,
+
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    pub exited: bool,
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    pub(crate) persistent_registers: enum_map::EnumMap<Register, u8>,
 }
 
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new(mode: Chip8Mode,) -> CPU {
         let mut cpu = CPU {
             cycles_pending: 0.0,
             timers_pending: 0.0,
+            mode,
             pc: 0x200,
             memory: [0; 4096],
             screen: Display::new(),
-            registers: enum_map::enum_map! {
-                Register::V0 => 0,
-                Register::V1 => 0,
-                Register::V2 => 0,
-                Register::V3 => 0,
-                Register::V4 => 0,
-                Register::V5 => 0,
-                Register::V6 => 0,
-                Register::V7 => 0,
-                Register::V8 => 0,
-                Register::V9 => 0,
-                Register::VA => 0,
-                Register::VB => 0,
-                Register::VC => 0,
-                Register::VD => 0,
-                Register::VE => 0,
-                Register::VF => 0,
-            },
+            registers: enum_map::enum_map! { _ => 0 },
             call_stack: CallStack::new(),
             delay_timer: 0,
             sound_timer: 0,
             input: [false; 16],
             awaiting_key: None,
             index: 0,
+
+            #[cfg(feature = "cosmac")]
+            vblank_wait: false,
+
+            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
             exited: false,
+            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+            high_res: false,
+            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+            persistent_registers: enum_map::enum_map! { _ => 0 },
         };
         cpu.clear_memory();
         cpu
@@ -149,25 +150,39 @@ impl CPU {
     }
 
     pub fn step(&mut self) -> Result<u32, Error> {
+        #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
+
         if let Some(_) = self.awaiting_key {
-            return Err(Error::AwaitingKey);
+            return Ok(1);
         }
         let opcode = self.read_memory_word(self.pc)?;
         let inst = Instruction::lookup(opcode);
         if let Some(inst) = inst {
             let cycles = inst.cycles;
             self.pc += 2;
-            let extra_cycles = (inst.execute)(self, opcode);
-            Ok(cycles + extra_cycles)
+            if let Some(op) = match self.mode {
+                #[cfg(feature = "cosmac")]
+                Chip8Mode::Cosmac => inst.cosmac,
+                #[cfg(feature = "super-chip")]
+                Chip8Mode::SuperChip => inst.schip,
+                #[cfg(feature = "xo-chip")]
+                Chip8Mode::XoChip => inst.xochip,
+            } {
+                let extra_cycles = op(self, opcode);
+                Ok(cycles + extra_cycles)
+            } else {
+                Err(Error::NotDefined(inst.disassembly))
+            }
         } else {
             Err(Error::UnknownOpcode(opcode))
         }
     }
 
     pub fn emulate(&mut self, dt: f64) -> Result<(), Error> {
+        #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
@@ -177,9 +192,15 @@ impl CPU {
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
         self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
         self.timers_pending -= timer_diff as f64;
+        #[cfg(feature = "cosmac")]
+        if timer_diff > 0 {
+            self.vblank_wait = false;
+        } else if self.vblank_wait {
+            return Ok(());
+        }
 
         if let Some(_) = self.awaiting_key {
-            return Err(Error::AwaitingKey);
+            return Ok(());
         }
 
         self.cycles_pending += dt * CLOCK_SPEED;
@@ -191,6 +212,7 @@ impl CPU {
     }
 
     pub fn emulate_until(&mut self, dt: f64, breakpoints: &[u16]) -> Result<(), Error> {
+        #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
@@ -200,9 +222,15 @@ impl CPU {
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
         self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
         self.timers_pending -= timer_diff as f64;
+        #[cfg(feature = "cosmac")]
+        if timer_diff > 0 {
+            self.vblank_wait = false;
+        } else if self.vblank_wait {
+            return Ok(());
+        }
 
         if let Some(_) = self.awaiting_key {
-            return Err(Error::AwaitingKey);
+            return Ok(());
         }
 
         self.cycles_pending += dt * CLOCK_SPEED;

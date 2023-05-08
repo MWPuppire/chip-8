@@ -19,201 +19,404 @@ use misc::*;
 mod timers;
 use timers::*;
 
+type OpcodeExecute = fn(&mut CPU, u16) -> u32;
+
 pub(crate) struct Instruction {
-    pub execute: fn(&mut CPU, u16) -> u32,
+    #[cfg(feature = "cosmac")]
+    pub cosmac: Option<OpcodeExecute>,
+    #[cfg(feature = "super-chip")]
+    pub schip: Option<OpcodeExecute>,
+    #[cfg(feature = "xo-chip")]
+    pub xochip: Option<OpcodeExecute>,
     pub cycles: u32,
     pub disassembly: &'static str,
+}
+
+#[allow(dead_code)]
+fn inst_todo(_: &mut CPU, code: u16) -> u32 {
+    let op = Instruction::disassemble(code).unwrap();
+    todo!("{}", op);
+}
+
+macro_rules! make_instruction {
+    ($cosmac:expr, $schip:expr, $xochip:expr, $cycles:literal, $disassembly:literal $(,)?) => {
+        Some(Instruction {
+            #[cfg(feature = "cosmac")]
+            cosmac: $cosmac,
+            #[cfg(feature = "super-chip")]
+            schip: $schip,
+            #[cfg(feature = "xo-chip")]
+            xochip: $xochip,
+            cycles: $cycles,
+            disassembly: $disassembly,
+        })
+    };
 }
 
 impl Instruction {
     pub fn lookup(opcode: u16) -> Option<Instruction> {
         match ((opcode >> 12) & 0xF, (opcode >> 8) & 0xF, (opcode >> 4) & 0xF, opcode & 0xF) {
-            (0x0, 0x0, 0x0, 0x0) => Some(Instruction {
-                execute: inst_nop,
-                cycles: 1,
-                disassembly: "(void) 0;",
-            }),
-            (0x0, 0x0, 0xB,   _) => None, // TODO scroll_up(N);
-            (0x0, 0x0, 0xC,   _) => None, // TODO scroll_down(N);
-            (0x0, 0x0, 0xE, 0x0) => Some(Instruction {
-                execute: inst_clear,
-                cycles: 1,
-                disassembly: "display_clear();",
-            }),
-            (0x0, 0x0, 0xE, 0xE) => Some(Instruction {
-                execute: inst_return,
-                cycles: 1,
-                disassembly: "return;",
-            }),
-            (0x0, 0x0, 0xF, 0xB) => None, // TODO scroll_right();
-            (0x0, 0x0, 0xF, 0xC) => None, // TODO scroll_left();
-            (0x0, 0x0, 0xF, 0xD) => None, // TODO exit();
-            (0x0, 0x0, 0xF, 0xE) => None, // TODO low_res();
-            (0x0, 0x0, 0xF, 0xF) => None, // TODO high_res();
-            (0x1,   _,   _,   _) => Some(Instruction {
-                execute: inst_goto,
-                cycles: 1,
-                disassembly: "goto NNN;",
-            }),
-            (0x2,   _,   _,   _) => Some(Instruction {
-                execute: inst_call,
-                cycles: 1,
-                disassembly: "*(0xNNN)();",
-            }),
-            (0x3,   _,   _,   _) => Some(Instruction {
-                execute: inst_if_equal,
-                cycles: 1,
-                disassembly: "if (Vx == NN) goto next;",
-            }),
-            (0x4,   _,   _,   _) => Some(Instruction {
-                execute: inst_if_inequal,
-                cycles: 1,
-                disassembly: "if (Vx != NN) goto next;",
-            }),
-            (0x5,   _,   _,   _) => Some(Instruction {
-                execute: inst_if_equal_register,
-                cycles: 1,
-                disassembly: "if (Vx == Vy) goto next;",
-            }),
-            (0x6,   _,   _,   _) => Some(Instruction {
-                execute: inst_set_register,
-                cycles: 1,
-                disassembly: "Vx = NN;",
-            }),
-            (0x7,   _,   _,   _) => Some(Instruction {
-                execute: inst_pluseq_immediate,
-                cycles: 1,
-                disassembly: "Vx += NN;",
-            }),
-            (0x8,   _,   _, 0x0) => Some(Instruction {
-                execute: inst_move_register,
-                cycles: 1,
-                disassembly: "Vx = Vy;",
-            }),
-            (0x8,   _,   _, 0x1) => Some(Instruction {
-                execute: inst_oreq_register,
-                cycles: 1,
-                disassembly: "Vx |= Vy;",
-            }),
-            (0x8,   _,   _, 0x2) => Some(Instruction {
-                execute: inst_andeq_register,
-                cycles: 1,
-                disassembly: "Vx &= Vy;",
-            }),
-            (0x8,   _,   _, 0x3) => Some(Instruction {
-                execute: inst_xoreq_register,
-                cycles: 1,
-                disassembly: "Vx ^= Vy;",
-            }),
-            (0x8,   _,   _, 0x4) => Some(Instruction {
-                execute: inst_pluseq_register,
-                cycles: 1,
-                disassembly: "Vx += Vy;",
-            }),
-            (0x8,   _,   _, 0x5) => Some(Instruction {
-                execute: inst_minuseq_register,
-                cycles: 1,
-                disassembly: "Vx -= Vy;",
-            }),
-            (0x8,   _,   _, 0x6) => Some(Instruction {
-                execute: inst_shift_right,
-                cycles: 1,
-                disassembly: "Vx = Vy >> 1;",
-            }),
-            (0x8,   _,   _, 0x7) => Some(Instruction {
-                execute: inst_subtract_register,
-                cycles: 1,
-                disassembly: "Vx = Vy - Vx;",
-            }),
-            (0x8,   _,   _, 0xE) => Some(Instruction {
-                execute: inst_shift_left,
-                cycles: 1,
-                disassembly: "Vx = Vy << 1;",
-            }),
-            (0x9,   _,   _,   _) => Some(Instruction {
-                execute: inst_if_inequal_register,
-                cycles: 1,
-                disassembly: "if (Vx != Vy) goto next;",
-            }),
-            (0xA,   _,   _,   _) => Some(Instruction {
-                execute: inst_set_index,
-                cycles: 1,
-                disassembly: "I = NNN;",
-            }),
-            (0xB,   _,   _,   _) => Some(Instruction {
-                execute: inst_jump_v0,
-                cycles: 1,
-                disassembly: "PC = V0 + NNN;",
-            }),
-            (0xC,   _,   _,   _) => Some(Instruction {
-                execute: inst_random,
-                cycles: 1,
-                disassembly: "Vx = rand() & NN;",
-            }),
-            (0xD,   _,   _,   _) => Some(Instruction {
-                execute: inst_draw,
-                cycles: 1,
-                disassembly: "draw(Vx, Vy, N);",
-            }),
-            (0xE,   _, 0x9, 0xE) => Some(Instruction {
-                execute: inst_key_equal,
-                cycles: 1,
-                disassembly: "if (key() == Vx) goto next;",
-            }),
-            (0xE,   _, 0xA, 0x1) => Some(Instruction {
-                execute: inst_key_inequal,
-                cycles: 1,
-                disassembly: "if (key() != Vx) goto next;",
-            }),
-            (0xF,   _, 0x0, 0x7) => Some(Instruction {
-                execute: inst_get_delay,
-                cycles: 1,
-                disassembly: "Vx = get_delay();",
-            }),
-            (0xF,   _, 0x0, 0xA) => Some(Instruction {
-                execute: inst_get_key,
-                cycles: 1,
-                disassembly: "Vx = get_key();",
-            }),
-            (0xF,   _, 0x1, 0x5) => Some(Instruction {
-                execute: inst_set_delay,
-                cycles: 1,
-                disassembly: "delay_timer(Vx);",
-            }),
-            (0xF,   _, 0x1, 0x8) => Some(Instruction {
-                execute: inst_set_sound,
-                cycles: 1,
-                disassembly: "sound_timer(Vx);",
-            }),
-            (0xF,   _, 0x1, 0xE) => Some(Instruction {
-                execute: inst_add_to_index,
-                cycles: 1,
-                disassembly: "I += Vx;",
-            }),
-            (0xF,   _, 0x2, 0x9) => Some(Instruction {
-                execute: inst_sprite_addr_index,
-                cycles: 1,
-                disassembly: "I = sprite_addr[Vx];",
-            }),
-            (0xF,   _, 0x3, 0x0) => None, // TODO I = digit_addr[Vx];
-            (0xF,   _, 0x3, 0x3) => Some(Instruction {
-                execute: inst_bcd,
-                cycles: 1,
-                disassembly: "set_bcd(I, Vx);",
-            }),
-            (0xF,   _, 0x5, 0x5) => Some(Instruction {
-                execute: inst_reg_dump,
-                cycles: 1,
-                disassembly: "reg_dump(Vx, &I);",
-            }),
-            (0xF,   _, 0x6, 0x5) => Some(Instruction {
-                execute: inst_reg_load,
-                cycles: 1,
-                disassembly: "reg_load(Vx, &I);",
-            }),
-            (0xF,   _, 0x7, 0x5) => None, // TODO persist_dump(Vx);
-            (0xF,   _, 0x8, 0x5) => None, // TODO persist_load(Vx);
+            (0x0, 0x0, 0x0, 0x0) => make_instruction!(
+                Some(inst_nop),
+                Some(inst_nop),
+                Some(inst_nop),
+                1,
+                "(void) 0;",
+            ),
+            (0x0, 0x0, 0xC,   _) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "scroll_down(N);",
+            ),
+            (0x0, 0x0, 0xD,   _) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "scroll_up(N);",
+            ),
+            (0x0, 0x0, 0xE, 0x0) => make_instruction!(
+                Some(inst_clear),
+                Some(inst_clear),
+                Some(inst_clear),
+                1,
+                "display_clear();",
+            ),
+            (0x0, 0x0, 0xE, 0xE) => make_instruction!(
+                Some(inst_return),
+                Some(inst_return),
+                Some(inst_return),
+                1,
+                "return;",
+            ),
+            (0x0, 0x0, 0xF, 0xB) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "scroll_right();",
+            ),
+            (0x0, 0x0, 0xF, 0xC) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "scroll_left();",
+            ),
+            (0x0, 0x0, 0xF, 0xD) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "exit();",
+            ),
+            (0x0, 0x0, 0xF, 0xE) => make_instruction!(
+                None,
+                Some(inst_low_res),
+                Some(inst_low_res),
+                1,
+                "low_res();",
+            ),
+            (0x0, 0x0, 0xF, 0xF) => make_instruction!(
+                None,
+                Some(inst_high_res),
+                Some(inst_high_res),
+                1,
+                "high_res();",
+            ),
+            (0x1,   _,   _,   _) => make_instruction!(
+                Some(inst_goto),
+                Some(inst_goto),
+                Some(inst_goto),
+                1,
+                "goto NNN;",
+            ),
+            (0x2,   _,   _,   _) => make_instruction!(
+                Some(inst_call),
+                Some(inst_call),
+                Some(inst_call),
+                1,
+                "*(0xNNN)();",
+            ),
+            (0x3,   _,   _,   _) => make_instruction!(
+                Some(inst_if_equal),
+                Some(inst_if_equal),
+                Some(inst_if_equal),
+                1,
+                "if (Vx == NN) goto next;",
+            ),
+            (0x4,   _,   _,   _) => make_instruction!(
+                Some(inst_if_inequal),
+                Some(inst_if_inequal),
+                Some(inst_if_inequal),
+                1,
+                "if (Vx != NN) goto next;",
+            ),
+            (0x5,   _,   _,   0x0) => make_instruction!(
+                Some(inst_if_equal_register),
+                Some(inst_if_equal_register),
+                Some(inst_if_equal_register),
+                1,
+                "if (Vx == Vy) goto next;",
+            ),
+            (0x5,   _,   _, 0x2) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "reg_dump(Vx, Vy, &I);",
+            ),
+            (0x5,   _,   _, 0x3) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "reg_load(Vx, Vy, &I);",
+            ),
+            (0x6,   _,   _,   _) => make_instruction!(
+                Some(inst_set_register),
+                Some(inst_set_register),
+                Some(inst_set_register),
+                1,
+                "Vx = NN;",
+            ),
+            (0x7,   _,   _,   _) => make_instruction!(
+                Some(inst_pluseq_immediate),
+                Some(inst_pluseq_immediate),
+                Some(inst_pluseq_immediate),
+                1,
+                "Vx += NN;",
+            ),
+            (0x8,   _,   _, 0x0) => make_instruction!(
+                Some(inst_move_register),
+                Some(inst_move_register),
+                Some(inst_move_register),
+                1,
+                "Vx = Vy;",
+            ),
+            (0x8,   _,   _, 0x1) => make_instruction!(
+                Some(inst_oreq_register),
+                Some(inst_oreq_register),
+                Some(inst_oreq_register),
+                1,
+                "Vx |= Vy;",
+            ),
+            (0x8,   _,   _, 0x2) => make_instruction!(
+                Some(inst_andeq_register),
+                Some(inst_andeq_register),
+                Some(inst_andeq_register),
+                1,
+                "Vx &= Vy;",
+            ),
+            (0x8,   _,   _, 0x3) => make_instruction!(
+                Some(inst_xoreq_register),
+                Some(inst_xoreq_register),
+                Some(inst_xoreq_register),
+                1,
+                "Vx ^= Vy;",
+            ),
+            (0x8,   _,   _, 0x4) => make_instruction!(
+                Some(inst_pluseq_register),
+                Some(inst_pluseq_register),
+                Some(inst_pluseq_register),
+                1,
+                "Vx += Vy;",
+            ),
+            (0x8,   _,   _, 0x5) => make_instruction!(
+                Some(inst_minuseq_register),
+                Some(inst_minuseq_register),
+                Some(inst_minuseq_register),
+                1,
+                "Vx -= Vy;",
+            ),
+            (0x8,   _,   _, 0x6) => make_instruction!(
+                Some(inst_shift_right),
+                Some(inst_shift_right),
+                Some(inst_shift_right),
+                1,
+                "Vx = Vy >> 1;",
+            ),
+            (0x8,   _,   _, 0x7) => make_instruction!(
+                Some(inst_subtract_register),
+                Some(inst_subtract_register),
+                Some(inst_subtract_register),
+                1,
+                "Vx = Vy - Vx;",
+            ),
+            (0x8,   _,   _, 0xE) => make_instruction!(
+                Some(inst_shift_left),
+                Some(inst_shift_left),
+                Some(inst_shift_left),
+                1,
+                "Vx = Vy << 1;",
+            ),
+            (0x9,   _,   _,   _) => make_instruction!(
+                Some(inst_if_inequal_register),
+                Some(inst_if_inequal_register),
+                Some(inst_if_inequal_register),
+                1,
+                "if (Vx != Vy) goto next;",
+            ),
+            (0xA,   _,   _,   _) => make_instruction!(
+                Some(inst_set_index),
+                Some(inst_set_index),
+                Some(inst_set_index),
+                1,
+                "I = NNN;",
+            ),
+            (0xB,   _,   _,   _) => make_instruction!(
+                Some(inst_jump_v0),
+                Some(inst_jump_v0),
+                Some(inst_jump_v0),
+                1,
+                "PC = V0 + NNN;",
+            ),
+            (0xC,   _,   _,   _) => make_instruction!(
+                Some(inst_random),
+                Some(inst_random),
+                Some(inst_random),
+                1,
+                "Vx = rand() & NN;",
+            ),
+            (0xD,   _,   _,   _) => make_instruction!(
+                Some(inst_draw_cosmac),
+                Some(inst_draw_schip),
+                Some(inst_draw_xochip),
+                1,
+                "draw(Vx, Vy, N);",
+            ),
+            (0xE,   _, 0x9, 0xE) => make_instruction!(
+                Some(inst_key_equal),
+                Some(inst_key_equal),
+                Some(inst_key_equal),
+                1,
+                "if (key() == Vx) goto next;",
+            ),
+            (0xE,   _, 0xA, 0x1) => make_instruction!(
+                Some(inst_key_inequal),
+                Some(inst_key_inequal),
+                Some(inst_key_inequal),
+                1,
+                "if (key() != Vx) goto next;",
+            ),
+            (0xF, 0x0, 0x0, 0x0) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "I = read_and_skip_next_word();",
+            ),
+            (0xF,   _, 0x0, 0x1) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "set_drawing_plane(N);",
+            ),
+            (0xF,   _, 0x0, 0x2) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "load_audio_pattern(I);",
+            ),
+            (0xF,   _, 0x0, 0x7) => make_instruction!(
+                Some(inst_get_delay),
+                Some(inst_get_delay),
+                Some(inst_get_delay),
+                1,
+                "Vx = get_delay();",
+            ),
+            (0xF,   _, 0x0, 0xA) => make_instruction!(
+                Some(inst_get_key),
+                Some(inst_get_key),
+                Some(inst_get_key),
+                1,
+                "Vx = get_key();",
+            ),
+            (0xF,   _, 0x1, 0x5) => make_instruction!(
+                Some(inst_set_delay),
+                Some(inst_set_delay),
+                Some(inst_set_delay),
+                1,
+                "delay_timer(Vx);",
+            ),
+            (0xF,   _, 0x1, 0x8) => make_instruction!(
+                Some(inst_set_sound),
+                Some(inst_set_sound),
+                Some(inst_set_sound),
+                1,
+                "sound_timer(Vx);",
+            ),
+            (0xF,   _, 0x1, 0xE) => make_instruction!(
+                Some(inst_add_to_index),
+                Some(inst_add_to_index),
+                Some(inst_add_to_index),
+                1,
+                "I += Vx;",
+            ),
+            (0xF,   _, 0x2, 0x9) => make_instruction!(
+                Some(inst_sprite_addr_index),
+                Some(inst_sprite_addr_index),
+                Some(inst_sprite_addr_index),
+                1,
+                "I = sprite_addr[Vx];",
+            ),
+            (0xF,   _, 0x3, 0x0) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "I = digit_addr[Vx];",
+            ),
+            (0xF,   _, 0x3, 0x3) => make_instruction!(
+                Some(inst_bcd),
+                Some(inst_bcd),
+                Some(inst_bcd),
+                1,
+                "set_bcd(I, Vx);",
+            ),
+            (0xF,   _, 0x3, 0xA) => make_instruction!(
+                None,
+                None,
+                Some(inst_todo),
+                1,
+                "set_audio_hertz(Vx);",
+            ),
+            (0xF,   _, 0x5, 0x5) => make_instruction!(
+                Some(inst_reg_dump),
+                Some(inst_reg_dump),
+                Some(inst_reg_dump),
+                1,
+                "reg_dump(V0, Vx, &I);",
+            ),
+            (0xF,   _, 0x6, 0x5) => make_instruction!(
+                Some(inst_reg_load),
+                Some(inst_reg_load),
+                Some(inst_reg_load),
+                1,
+                "reg_load(V0, Vx, &I);",
+            ),
+            (0xF,   _, 0x7, 0x5) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "persist_dump(Vx);",
+            ),
+            (0xF,   _, 0x8, 0x5) => make_instruction!(
+                None,
+                Some(inst_todo),
+                Some(inst_todo),
+                1,
+                "persist_load(Vx);",
+            ),
             _ => None
         }
+    }
+    pub fn disassemble(opcode: u16) -> Option<&'static str> {
+        Self::lookup(opcode).map(|x| x.disassembly)
     }
 }

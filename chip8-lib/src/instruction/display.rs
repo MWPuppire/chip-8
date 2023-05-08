@@ -2,19 +2,71 @@ use crate::Register;
 use crate::CPU;
 use crate::display;
 
-pub fn inst_draw(cpu: &mut CPU, inst: u16) -> u32 {
+#[cfg(feature = "cosmac")]
+pub fn inst_draw_cosmac(cpu: &mut CPU, inst: u16) -> u32 {
+    cpu.vblank_wait = true;
     let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
-    let x = cpu.registers[reg_x];
-    let y = cpu.registers[reg_y];
+    let x = cpu.registers[reg_x] % display::LOWRES_SCREEN_WIDTH as u8;
+    let y = cpu.registers[reg_y] % display::LOWRES_SCREEN_HEIGHT as u8;
     let n = (inst & 0xF) as u8;
     let mut flag = false;
     for (i, idx) in (0..n).zip(cpu.index..) {
         let byte = cpu.read_memory_byte(idx).unwrap();
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
-                flag |= cpu.screen.write_pixel((x + bit) % display::SCREEN_WIDTH as u8,
-                    (y + i) % display::SCREEN_HEIGHT as u8);
+                flag |= cpu.screen.write_to_screen((x + bit) as u8, (y + i) as u8);
+            }
+        }
+    }
+    cpu.registers[Register::VF] = if flag { 1 } else { 0 };
+    0
+}
+#[cfg(feature = "super-chip")]
+pub fn inst_draw_schip(cpu: &mut CPU, inst: u16) -> u32 {
+    let dimensions = if cpu.screen.high_res {
+        display::HIGHRES_SCREEN_DIMENSIONS
+    } else {
+        display::LOWRES_SCREEN_DIMENSIONS
+    };
+    let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
+    let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
+    let x = cpu.registers[reg_x] % dimensions.0 as u8;
+    let y = cpu.registers[reg_x] % dimensions.1 as u8;
+    let n = (inst & 0xF) as u8;
+    let mut flag = false;
+    for (i, idx) in (0..n).zip(cpu.index..) {
+        let byte = cpu.read_memory_byte(idx).unwrap();
+        for bit in 0..8 {
+            if (byte << bit) & 128 == 128 {
+                flag |= cpu.screen.write_to_screen((x + bit) as u8, (y + i) as u8);
+            }
+        }
+    }
+    cpu.registers[Register::VF] = if flag { 1 } else { 0 };
+    0
+}
+#[cfg(feature = "xo-chip")]
+pub fn inst_draw_xochip(cpu: &mut CPU, inst: u16) -> u32 {
+    let dimensions = if cpu.screen.high_res {
+        display::HIGHRES_SCREEN_DIMENSIONS
+    } else {
+        display::LOWRES_SCREEN_DIMENSIONS
+    };
+    let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
+    let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
+    let x = cpu.registers[reg_x] % dimensions.0 as u8;
+    let y = cpu.registers[reg_x] % dimensions.1 as u8;
+    let n = (inst & 0xF) as u8;
+    let mut flag = false;
+    for (i, idx) in (0..n).zip(cpu.index..) {
+        let byte = cpu.read_memory_byte(idx).unwrap();
+        for bit in 0..8 {
+            if (byte << bit) & 128 == 128 {
+                flag |= cpu.screen.write_to_screen(
+                    ((x + bit) % dimensions.0) as u8,
+                    ((y + i) % dimensions.1) as u8
+                );
             }
         }
     }
@@ -25,4 +77,15 @@ pub fn inst_draw(cpu: &mut CPU, inst: u16) -> u32 {
 pub fn inst_clear(cpu: &mut CPU, _: u16) -> u32 {
     cpu.screen.clear();
     0
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(any(feature = "super-chip", feature = "xo-chip"))] {
+        pub fn inst_lowres(cpu: &mut CPU, _: u16) -> u32 {
+            cpu.screen.high_res = false;
+        }
+        pub fn inst_highres(cpu: &mut CPU, _: u16) -> u32 {
+            cpu.screen.high_res = true;
+        }
+    }
 }

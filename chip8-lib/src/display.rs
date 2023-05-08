@@ -1,12 +1,29 @@
-pub const SCREEN_WIDTH: usize = 64;
-pub const SCREEN_HEIGHT: usize = 32;
-
 #[cfg(feature = "std")]
 use std::{vec, vec::Vec};
+
+pub const LOWRES_SCREEN_WIDTH:   usize = 64;
+pub const LOWRES_SCREEN_HEIGHT:  usize = 32;
+pub const LOWRES_SCREEN_DIMENSIONS: (usize, usize) = (LOWRES_SCREEN_WIDTH, LOWRES_SCREEN_HEIGHT);
+pub const HIGHRES_SCREEN_WIDTH:  usize = 128;
+pub const HIGHRES_SCREEN_HEIGHT: usize = 64;
+pub const HIGHRES_SCREEN_DIMENSIONS: (usize, usize) = (HIGHRES_SCREEN_WIDTH, HIGHRES_SCREEN_HEIGHT);
+cfg_if::cfg_if! {
+    if #[cfg(any(feature = "super-chip", feature = "xo-chip"))] {
+        pub const SCREEN_WIDTH:  usize = HIGHRES_SCREEN_WIDTH;
+        pub const SCREEN_HEIGHT: usize = HIGHRES_SCREEN_HEIGHT;
+        pub const SCREEN_DIMENSIONS: (usize, usize) = HIGHRES_SCREEN_DIMENSIONS;
+    } else {
+        pub const SCREEN_WIDTH:  usize = LOWRES_SCREEN_WIDTH;
+        pub const SCREEN_HEIGHT: usize = LOWRES_SCREEN_HEIGHT;
+        pub const SCREEN_DIMENSIONS: (usize, usize) = LOWRES_SCREEN_DIMENSIONS;
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Display {
     buffer: [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT],
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    pub(crate) high_res: bool,
 }
 
 impl Display {
@@ -32,24 +49,33 @@ impl Display {
         }
     }
 
-    pub fn write_to_screen(&mut self, x: u8, y: u8, hires: bool) -> bool {
-        if hires {
-            if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
-                return false;
+    cfg_if::cfg_if! {
+        if #[cfg(any(feature = "super-chip", feature = "xo-chip"))] {
+            pub fn write_to_screen(&mut self, x: u8, y: u8) -> bool {
+                if self.high_res {
+                    if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+                        return false;
+                    }
+                    self.write_pixel_unchecked(x, y)
+                } else {
+                    let mut toggle = false;
+                    let x = x << 1;
+                    let y = y << 1;
+                    if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+                        return false;
+                    }
+                    toggle |= self.write_pixel_unchecked(x + 0, y + 0);
+                    toggle |= self.write_pixel_unchecked(x + 1, y + 0);
+                    toggle |= self.write_pixel_unchecked(x + 0, y + 1);
+                    toggle |= self.write_pixel_unchecked(x + 1, y + 1);
+                    toggle
+                }
             }
-            self.write_pixel_unchecked(x, y)
         } else {
-            let mut toggle = false;
-            let x = x << 1;
-            let y = y << 1;
-            if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
-                return false;
+            #[inline]
+            pub fn write_to_screen(&mut self, x: u8, y: u8) -> bool {
+                self.write_pixel(x, y)
             }
-            toggle |= self.write_pixel_unchecked(x + 0, y + 0);
-            toggle |= self.write_pixel_unchecked(x + 1, y + 0);
-            toggle |= self.write_pixel_unchecked(x + 0, y + 1);
-            toggle |= self.write_pixel_unchecked(x + 1, y + 1);
-            toggle
         }
     }
 

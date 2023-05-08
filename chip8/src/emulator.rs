@@ -1,5 +1,4 @@
-use chip8_lib::Error;
-use chip8_lib::CPU;
+use chip8_lib::{Error, CPU, Chip8Mode};
 use crate::log;
 
 use std::path::Path;
@@ -17,7 +16,7 @@ pub struct Emulator {
 impl Emulator {
     pub fn new() -> Emulator {
         Emulator {
-            cpu: CPU::new(),
+            cpu: CPU::new(Chip8Mode::default()),
             has_rom: false,
             breakpoints: vec!(),
             last_time: Instant::now(),
