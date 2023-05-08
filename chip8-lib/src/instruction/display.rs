@@ -15,7 +15,7 @@ pub fn inst_draw_cosmac(cpu: &mut CPU, inst: u16) -> u32 {
         let byte = cpu.read_memory_byte(idx).unwrap();
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
-                flag |= cpu.screen.write_to_screen((x + bit) as u8, (y + i) as u8);
+                flag |= cpu.screen.write_to_screen(x + bit, y + i);
             }
         }
     }
@@ -32,14 +32,14 @@ pub fn inst_draw_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
     let x = cpu.registers[reg_x] % dimensions.0 as u8;
-    let y = cpu.registers[reg_x] % dimensions.1 as u8;
+    let y = cpu.registers[reg_y] % dimensions.1 as u8;
     let n = (inst & 0xF) as u8;
     let mut flag = false;
     for (i, idx) in (0..n).zip(cpu.index..) {
         let byte = cpu.read_memory_byte(idx).unwrap();
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
-                flag |= cpu.screen.write_to_screen((x + bit) as u8, (y + i) as u8);
+                flag |= cpu.screen.write_to_screen(x + bit, y + i);
             }
         }
     }
@@ -56,7 +56,7 @@ pub fn inst_draw_xochip(cpu: &mut CPU, inst: u16) -> u32 {
     let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
     let x = cpu.registers[reg_x] % dimensions.0 as u8;
-    let y = cpu.registers[reg_x] % dimensions.1 as u8;
+    let y = cpu.registers[reg_y] % dimensions.1 as u8;
     let n = (inst & 0xF) as u8;
     let mut flag = false;
     for (i, idx) in (0..n).zip(cpu.index..) {
@@ -64,8 +64,8 @@ pub fn inst_draw_xochip(cpu: &mut CPU, inst: u16) -> u32 {
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
                 flag |= cpu.screen.write_to_screen(
-                    ((x + bit) % dimensions.0) as u8,
-                    ((y + i) % dimensions.1) as u8
+                    (x + bit) % dimensions.0 as u8,
+                    (y + i) % dimensions.1 as u8
                 );
             }
         }
@@ -81,11 +81,13 @@ pub fn inst_clear(cpu: &mut CPU, _: u16) -> u32 {
 
 cfg_if::cfg_if! {
     if #[cfg(any(feature = "super-chip", feature = "xo-chip"))] {
-        pub fn inst_lowres(cpu: &mut CPU, _: u16) -> u32 {
+        pub fn inst_low_res(cpu: &mut CPU, _: u16) -> u32 {
             cpu.screen.high_res = false;
+            0
         }
-        pub fn inst_highres(cpu: &mut CPU, _: u16) -> u32 {
+        pub fn inst_high_res(cpu: &mut CPU, _: u16) -> u32 {
             cpu.screen.high_res = true;
+            0
         }
     }
 }

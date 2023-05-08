@@ -11,19 +11,17 @@ const CLOCK_SPEED: f64 = 500.0;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
-        use std::{vec, vec::Vec};
+        use std::vec::Vec;
 
         #[repr(transparent)]
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, Default)]
         pub struct CallStack {
             stack: Vec<u16>,
         }
 
         impl CallStack {
             pub fn new() -> Self {
-                CallStack {
-                    stack: vec![],
-                }
+                Self::default()
             }
             pub fn push(&mut self, addr: u16) {
                 self.stack.push(addr);
@@ -72,6 +70,11 @@ cfg_if::cfg_if! {
                     self.call_stack_idx -= 1;
                     Some(self.call_stack[self.call_stack_idx])
                 }
+            }
+        }
+        impl Default for CallStack {
+            fn default() -> Self {
+                Self::new()
             }
         }
 
@@ -136,8 +139,6 @@ impl CPU {
             #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
             exited: false,
             #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
-            high_res: false,
-            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
             persistent_registers: enum_map::enum_map! { _ => 0 },
         };
         cpu.clear_memory();
@@ -155,7 +156,7 @@ impl CPU {
             return Err(Error::Exited);
         }
 
-        if let Some(_) = self.awaiting_key {
+        if self.awaiting_key.is_some() {
             return Ok(1);
         }
         let opcode = self.read_memory_word(self.pc)?;
@@ -189,8 +190,8 @@ impl CPU {
 
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
-        self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
-        self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
+        self.delay_timer = self.delay_timer.saturating_sub(timer_diff);
+        self.sound_timer = self.sound_timer.saturating_sub(timer_diff);
         self.timers_pending -= timer_diff as f64;
         #[cfg(feature = "cosmac")]
         if timer_diff > 0 {
@@ -199,7 +200,7 @@ impl CPU {
             return Ok(());
         }
 
-        if let Some(_) = self.awaiting_key {
+        if self.awaiting_key.is_some() {
             return Ok(());
         }
 
@@ -219,8 +220,8 @@ impl CPU {
 
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
-        self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
-        self.sound_timer = self.sound_timer.checked_sub(timer_diff).unwrap_or(0);
+        self.delay_timer = self.delay_timer.saturating_sub(timer_diff);
+        self.sound_timer = self.sound_timer.saturating_sub(timer_diff);
         self.timers_pending -= timer_diff as f64;
         #[cfg(feature = "cosmac")]
         if timer_diff > 0 {
@@ -229,7 +230,7 @@ impl CPU {
             return Ok(());
         }
 
-        if let Some(_) = self.awaiting_key {
+        if self.awaiting_key.is_some() {
             return Ok(());
         }
 
@@ -330,9 +331,7 @@ impl CPU {
             return Err(Error::InvalidFile);
         }
         self.clear_memory();
-        for i in 0..buf.len() {
-            self.memory[i + 0x200] = buf[i];
-        }
+        self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);
         Ok(())
     }
 

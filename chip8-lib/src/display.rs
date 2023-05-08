@@ -30,6 +30,8 @@ impl Display {
     pub fn new() -> Display {
         Display {
             buffer: [[false; SCREEN_WIDTH]; SCREEN_HEIGHT],
+            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+            high_res: false,
         }
     }
 
@@ -103,7 +105,7 @@ impl Display {
         let mut out = Vec::with_capacity(scale_x * scale_y * SCREEN_WIDTH * SCREEN_HEIGHT);
         for row in self.buffer.iter() {
             for _ in 0..scale_y {
-                out.extend(row.into_iter().flat_map(|set|
+                out.extend(row.iter().flat_map(|set|
                     vec![if *set { 0xFFFFFFFFu32 } else { 0x00000000u32 }; scale_x].into_iter()
                 ));
             }
