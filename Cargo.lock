@@ -102,6 +102,8 @@ dependencies = [
  "enum-map",
  "getrandom",
  "rand",
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]
@@ -312,6 +314,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50c25992259941eb7e57b936157961b217a4fc8597829ddef0596d6c3cd86e1a"
 dependencies = [
  "enum-map-derive",
+ "serde",
 ]
 
 [[package]]
@@ -944,6 +947,18 @@ name = "serde"
 version = "1.0.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "serde_derive"

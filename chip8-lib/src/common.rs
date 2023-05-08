@@ -1,4 +1,6 @@
 use core::fmt;
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -29,6 +31,7 @@ impl std::error::Error for Error { }
 cfg_if::cfg_if! {
     if #[cfg(all(feature = "cosmac", feature = "super-chip", feature = "xo-chip"))] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             Cosmac = 0,
@@ -37,6 +40,7 @@ cfg_if::cfg_if! {
         }
     } else if #[cfg(all(feature = "cosmac", feature = "super-chip"))] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             Cosmac = 0,
@@ -44,6 +48,7 @@ cfg_if::cfg_if! {
         }
     } else if #[cfg(all(feature = "cosmac", feature = "xo-chip"))] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             Cosmac = 0,
@@ -51,6 +56,7 @@ cfg_if::cfg_if! {
         }
     } else if #[cfg(all(feature = "super-chip", feature = "xo-chip"))] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             SuperChip = 1,
@@ -58,18 +64,21 @@ cfg_if::cfg_if! {
         }
     } else if #[cfg(feature = "cosmac")] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             Cosmac = 0,
         }
     } else if #[cfg(feature = "super-chip")] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             SuperChip = 1,
         }
     } else if #[cfg(feature = "xo-chip")] {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
             #[default]
             XoChip = 2,

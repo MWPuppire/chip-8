@@ -5,6 +5,10 @@ extern crate rand;
 extern crate cfg_if;
 #[cfg(feature = "std")]
 extern crate std;
+#[cfg(feature = "serde")]
+extern crate serde;
+#[cfg(feature = "serde")]
+extern crate serde_big_array;
 
 pub mod cpu;
 pub mod common;

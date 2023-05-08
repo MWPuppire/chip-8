@@ -6,8 +6,15 @@ use crate::font;
 
 use core::convert::Infallible;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+#[cfg(feature = "serde")]
+use serde_big_array::BigArray;
+
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
+
+pub const CHIP8_MEM_SIZE: usize = 4096;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
@@ -15,6 +22,7 @@ cfg_if::cfg_if! {
 
         #[repr(transparent)]
         #[derive(Clone, Debug, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub struct CallStack {
             stack: Vec<u16>,
         }
@@ -43,7 +51,9 @@ cfg_if::cfg_if! {
         const CALL_STACK_SIZE: usize = 64;
 
         #[derive(Clone, Debug)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub struct CallStack {
+            #[cfg_attr(feature = "serde", serde(with = "BigArray"))]
             call_stack: [u16; CALL_STACK_SIZE],
             call_stack_idx: usize,
         }
@@ -98,7 +108,7 @@ pub struct CPU {
     pub pc: u16,
     pub index: u16,
     pub registers: enum_map::EnumMap<Register, u8>,
-    pub memory: [u8; 4096],
+    pub memory: [u8; CHIP8_MEM_SIZE],
     pub screen: Display,
     pub call_stack: CallStack,
     pub delay_timer: u8,
@@ -116,6 +126,24 @@ pub struct CPU {
     pub(crate) persistent_registers: enum_map::EnumMap<Register, u8>,
 }
 
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SavedState {
+    mode: Chip8Mode,
+    pc: u16,
+    index: u16,
+    registers: enum_map::EnumMap<Register, u8>,
+    #[cfg_attr(feature = "serde", serde(with = "BigArray"))]
+    memory: [u8; CHIP8_MEM_SIZE],
+    screen: Display,
+    call_stack: CallStack,
+    delay_timer: u8,
+    sound_timer: u8,
+    awaiting_key: Option<Register>,
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    persistent_registers: enum_map::EnumMap<Register, u8>
+}
+
 impl CPU {
     pub fn new(mode: Chip8Mode,) -> CPU {
         let mut cpu = CPU {
@@ -123,7 +151,7 @@ impl CPU {
             timers_pending: 0.0,
             mode,
             pc: 0x200,
-            memory: [0; 4096],
+            memory: [0; CHIP8_MEM_SIZE],
             screen: Display::new(),
             registers: enum_map::enum_map! { _ => 0 },
             call_stack: CallStack::new(),
@@ -351,5 +379,54 @@ impl CPU {
         } else {
             None
         }
+    }
+
+    pub fn save_state(&self) -> Result<SavedState, Error> {
+        #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+        if self.exited {
+            return Err(Error::Exited);
+        }
+        Ok(SavedState {
+            mode: self.mode,
+            pc: self.pc,
+            index: self.index,
+            registers: self.registers,
+            memory: self.memory.clone(),
+            screen: self.screen.clone(),
+            call_stack: self.call_stack.clone(),
+            delay_timer: self.delay_timer,
+            sound_timer: self.sound_timer,
+            awaiting_key: self.awaiting_key,
+            #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+            persistent_registers: self.persistent_registers,
+        })
+    }
+
+    pub fn load_state(&mut self, state: SavedState) {
+        self.mode = state.mode;
+
+        cfg_if::cfg_if! {
+            if #[cfg(any(feature = "super-chip", feature = "xo-chip"))] {
+                self.exited = false;
+                self.persistent_registers = state.persistent_registers;
+            }
+        }
+        self.cycles_pending = 0.0;
+        self.timers_pending = 0.0;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "cosmac")] {
+                self.vblank_wait = false;
+            }
+        }
+
+        self.pc = state.pc;
+        self.index = state.index;
+        self.registers = state.registers;
+        self.memory = state.memory;
+        self.screen = state.screen;
+        self.call_stack = state.call_stack;
+        self.delay_timer = state.delay_timer;
+        self.sound_timer = state.sound_timer;
+        self.awaiting_key = state.awaiting_key;
     }
 }

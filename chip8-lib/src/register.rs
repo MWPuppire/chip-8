@@ -1,4 +1,8 @@
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 #[derive(enum_map::Enum, Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum Register {
     V0,

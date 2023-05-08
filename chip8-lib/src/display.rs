@@ -1,6 +1,11 @@
 #[cfg(feature = "std")]
 use std::{vec, vec::Vec};
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+#[cfg(feature = "serde")]
+use serde_big_array::BigArray;
+
 pub const LOWRES_SCREEN_WIDTH:   usize = 64;
 pub const LOWRES_SCREEN_HEIGHT:  usize = 32;
 pub const LOWRES_SCREEN_DIMENSIONS: (usize, usize) = (LOWRES_SCREEN_WIDTH, LOWRES_SCREEN_HEIGHT);
@@ -20,8 +25,10 @@ cfg_if::cfg_if! {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Display {
-    buffer: [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT],
+    #[cfg_attr(feature = "serde", serde(with = "BigArray"))]
+    buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
     #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
     pub(crate) high_res: bool,
 }
@@ -29,7 +36,7 @@ pub struct Display {
 impl Display {
     pub fn new() -> Display {
         Display {
-            buffer: [[false; SCREEN_WIDTH]; SCREEN_HEIGHT],
+            buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
             #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
             high_res: false,
         }
@@ -38,8 +45,9 @@ impl Display {
     pub fn write_pixel_unchecked(&mut self, x: u8, y: u8) -> bool {
         let x = x as usize;
         let y = y as usize;
-        let toggle = self.buffer[y][x];
-        self.buffer[y][x] = !self.buffer[y][x];
+        let pos = x + y * SCREEN_WIDTH;
+        let toggle = self.buffer[pos];
+        self.buffer[pos] = !self.buffer[pos];
         toggle
     }
 
@@ -82,7 +90,8 @@ impl Display {
     }
 
     pub fn read_pixel_unchecked(&self, x: u8, y: u8) -> bool {
-        self.buffer[y as usize][x as usize]
+        let pos = x as usize + (y as usize) * SCREEN_WIDTH;
+        self.buffer[pos]
     }
 
     pub fn read_pixel(&self, x: u8, y: u8) -> bool {
@@ -94,7 +103,7 @@ impl Display {
     }
 
     pub fn clear(&mut self) {
-        self.buffer.fill([false; SCREEN_WIDTH]);
+        self.buffer.fill(false);
     }
 
     #[cfg(feature = "std")]
@@ -103,7 +112,7 @@ impl Display {
             return vec![];
         }
         let mut out = Vec::with_capacity(scale_x * scale_y * SCREEN_WIDTH * SCREEN_HEIGHT);
-        for row in self.buffer.iter() {
+        for row in self.buffer.chunks(SCREEN_WIDTH) {
             for _ in 0..scale_y {
                 out.extend(row.iter().flat_map(|set|
                     vec![if *set { 0xFFFFFFFFu32 } else { 0x00000000u32 }; scale_x].into_iter()
