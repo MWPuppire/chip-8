@@ -15,5 +15,4 @@ mod font;
 
 pub use common::Error;
 pub use cpu::CPU;
-pub use instruction::Instruction;
 pub use register::Register;

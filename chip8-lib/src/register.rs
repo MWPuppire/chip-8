@@ -1,4 +1,4 @@
-#[derive(enum_map::Enum, Clone, Copy, PartialEq, Eq)]
+#[derive(enum_map::Enum, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Register {
     V0,
     V1,

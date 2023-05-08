@@ -1,8 +1,10 @@
 use crate::Error;
 use crate::Register;
-use crate::Instruction;
+use crate::instruction::Instruction;
 use crate::display::Display;
 use crate::font;
+
+use core::convert::Infallible;
 
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
@@ -12,39 +14,50 @@ cfg_if::cfg_if! {
         use std::{vec, vec::Vec};
 
         #[repr(transparent)]
-        struct CallStack {
+        #[derive(Clone, Debug)]
+        pub struct CallStack {
             stack: Vec<u16>,
         }
 
         impl CallStack {
-            fn new() -> Self {
+            pub fn new() -> Self {
                 CallStack {
                     stack: vec![],
                 }
             }
-            fn push(&mut self, addr: u16) {
+            pub fn push(&mut self, addr: u16) {
                 self.stack.push(addr);
             }
-            fn pop(&mut self) -> Option<u16> {
+            pub fn pop(&mut self) -> Option<u16> {
                 self.stack.pop()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a CallStack {
+            type Item = &'a u16;
+            type IntoIter = std::slice::Iter<'a, u16>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.stack.iter()
             }
         }
     } else {
         const CALL_STACK_SIZE: usize = 64;
 
-        struct CallStack {
+        #[derive(Clone, Debug)]
+        pub struct CallStack {
             call_stack: [u16; CALL_STACK_SIZE],
             call_stack_idx: usize,
         }
 
         impl CallStack {
-            fn new() -> Self {
+            pub fn new() -> Self {
                 CallStack {
                     call_stack: [0; CALL_STACK_SIZE],
                     call_stack_idx: 0,
                 }
             }
-            fn push(&mut self, addr: u16) {
+            pub fn push(&mut self, addr: u16) {
                 if self.call_stack_idx == CALL_STACK_SIZE {
                     // TODO raise error instead of no-op if out of space?
                     return;
@@ -52,7 +65,7 @@ cfg_if::cfg_if! {
                 self.call_stack[self.call_stack_idx] = addr;
                 self.call_stack_idx += 1;
             }
-            fn pop(&mut self) -> Option<u16> {
+            pub fn pop(&mut self) -> Option<u16> {
                 if self.call_stack_idx == 0 {
                     None
                 } else {
@@ -61,9 +74,19 @@ cfg_if::cfg_if! {
                 }
             }
         }
+
+        impl<'a> IntoIterator for &'a CallStack {
+            type Item = &'a u16;
+            type IntoIter = core::slice::Iter<'a, u16>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.call_stack[0..self.call_stack_idx].iter()
+            }
+        }
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct CPU {
     cycles_pending: f64,
     timers_pending: f64,
@@ -73,12 +96,13 @@ pub struct CPU {
     pub registers: enum_map::EnumMap<Register, u8>,
     pub memory: [u8; 4096],
     pub screen: Display,
-    call_stack: CallStack,
+    pub call_stack: CallStack,
     pub delay_timer: u8,
     pub sound_timer: u8,
 
     input: [bool; 16],
     awaiting_key: Option<Register>,
+    exited: bool,
 }
 
 impl CPU {
@@ -113,6 +137,7 @@ impl CPU {
             input: [false; 16],
             awaiting_key: None,
             index: 0,
+            exited: false,
         };
         cpu.clear_memory();
         cpu
@@ -124,6 +149,12 @@ impl CPU {
     }
 
     pub fn step(&mut self) -> Result<u32, Error> {
+        if self.exited {
+            return Err(Error::Exited);
+        }
+        if let Some(_) = self.awaiting_key {
+            return Err(Error::AwaitingKey);
+        }
         let opcode = self.read_memory_word(self.pc)?;
         let inst = Instruction::lookup(opcode);
         if let Some(inst) = inst {
@@ -132,11 +163,15 @@ impl CPU {
             let extra_cycles = (inst.execute)(self, opcode);
             Ok(cycles + extra_cycles)
         } else {
-            Err(Error::UnknownOpcode)
+            Err(Error::UnknownOpcode(opcode))
         }
     }
 
     pub fn emulate(&mut self, dt: f64) -> Result<(), Error> {
+        if self.exited {
+            return Err(Error::Exited);
+        }
+
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
@@ -144,7 +179,7 @@ impl CPU {
         self.timers_pending -= timer_diff as f64;
 
         if let Some(_) = self.awaiting_key {
-            return Ok(());
+            return Err(Error::AwaitingKey);
         }
 
         self.cycles_pending += dt * CLOCK_SPEED;
@@ -154,7 +189,12 @@ impl CPU {
         }
         Ok(())
     }
+
     pub fn emulate_until(&mut self, dt: f64, breakpoints: &[u16]) -> Result<(), Error> {
+        if self.exited {
+            return Err(Error::Exited);
+        }
+
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.checked_sub(timer_diff).unwrap_or(0);
@@ -162,7 +202,7 @@ impl CPU {
         self.timers_pending -= timer_diff as f64;
 
         if let Some(_) = self.awaiting_key {
-            return Ok(());
+            return Err(Error::AwaitingKey);
         }
 
         self.cycles_pending += dt * CLOCK_SPEED;
@@ -171,7 +211,7 @@ impl CPU {
             for i in breakpoints {
                 if self.pc == *i {
                     self.cycles_pending = 0.0;
-                    return Err(Error::Breakpoint);
+                    return Err(Error::Breakpoint(self.pc));
                 }
             }
             self.cycles_pending -= cycles_taken as f64;
@@ -195,7 +235,7 @@ impl CPU {
         // TODO raise error instead of no-op if no return address?
     }
 
-    pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
+    pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Infallible> {
         Ok(self.memory[pos as usize])
     }
 
@@ -209,7 +249,7 @@ impl CPU {
         }
     }
 
-    pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Error> {
+    pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Infallible> {
         self.memory[pos as usize] = byte;
         Ok(())
     }
@@ -270,6 +310,15 @@ impl CPU {
 
     pub fn disassemble(&self, idx: u16) -> Option<&str> {
         let word = self.read_memory_word(idx);
+        if let Ok(word) = word {
+            Instruction::lookup(word).map(|inst| inst.disassembly)
+        } else {
+            None
+        }
+    }
+
+    pub fn disassemble_next(&self) -> Option<&str> {
+        let word = self.read_memory_word(self.pc);
         if let Ok(word) = word {
             Instruction::lookup(word).map(|inst| inst.disassembly)
         } else {

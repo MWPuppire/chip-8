@@ -58,13 +58,13 @@ fn main() {
                                 *control_flow = ControlFlow::Exit;
                             }
                         },
-                        Err(Error::Breakpoint) => {
+                        Err(Error::Breakpoint(_)) => {
                             debug.open(target);
                             debug.put_text("Breakpoint reached");
                             running = false;
                         },
-                        Err(Error::UnknownOpcode) => {
-                            log!("Unknown opcode");
+                        Err(Error::UnknownOpcode(op)) => {
+                            log!("Unknown opcode 0x{:04x}", op);
                             *control_flow = ControlFlow::Exit;
                         },
                         _ => {},

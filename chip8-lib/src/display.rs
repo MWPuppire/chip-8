@@ -4,6 +4,7 @@ pub const SCREEN_HEIGHT: usize = 32;
 #[cfg(feature = "std")]
 use std::{vec, vec::Vec};
 
+#[derive(Clone, Debug)]
 pub struct Display {
     buffer: [[bool; SCREEN_WIDTH]; SCREEN_HEIGHT],
 }
@@ -15,18 +16,53 @@ impl Display {
         }
     }
 
-    pub fn write_pixel(&mut self, x: u8, y: u8) -> bool {
-        let x = (x & 63) as usize;
-        let y = (y & 31) as usize;
+    pub fn write_pixel_unchecked(&mut self, x: u8, y: u8) -> bool {
+        let x = x as usize;
+        let y = y as usize;
         let toggle = self.buffer[y][x];
         self.buffer[y][x] = !self.buffer[y][x];
         toggle
     }
 
+    pub fn write_pixel(&mut self, x: u8, y: u8) -> bool {
+        if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+            false
+        } else {
+            self.write_pixel_unchecked(x, y)
+        }
+    }
+
+    pub fn write_to_screen(&mut self, x: u8, y: u8, hires: bool) -> bool {
+        if hires {
+            if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+                return false;
+            }
+            self.write_pixel_unchecked(x, y)
+        } else {
+            let mut toggle = false;
+            let x = x << 1;
+            let y = y << 1;
+            if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+                return false;
+            }
+            toggle |= self.write_pixel_unchecked(x + 0, y + 0);
+            toggle |= self.write_pixel_unchecked(x + 1, y + 0);
+            toggle |= self.write_pixel_unchecked(x + 0, y + 1);
+            toggle |= self.write_pixel_unchecked(x + 1, y + 1);
+            toggle
+        }
+    }
+
+    pub fn read_pixel_unchecked(&self, x: u8, y: u8) -> bool {
+        self.buffer[y as usize][x as usize]
+    }
+
     pub fn read_pixel(&self, x: u8, y: u8) -> bool {
-        let x = (x & 63) as usize;
-        let y = (y & 31) as usize;
-        self.buffer[y][x]
+        if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
+            false
+        } else {
+            self.read_pixel_unchecked(x, y)
+        }
     }
 
     pub fn clear(&mut self) {
