@@ -6,16 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chip8-lib.path = "../chip8-lib"
-instant = "0.1.12"
-softbuffer = "0.2.0"
-winit = "0.27.0"
-
-# [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# minifb = "0.23.0"
+chip8-lib = { path = "../chip8-lib", features = [ "cosmac" ] }
+softbuffer = "0.2"
+winit = "0.28"
+cfg-if = "1.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-# minifb = { version = "0.23.0", features = [ "web" ], default-features = false }
-wasm-bindgen = "0.2.83"
-web-sys = { version = "0.3.60", features = [ "Window", "Document", "Element", "HtmlInputElement", "FileList", "File", "Blob" ] }
-js-sys = "0.3.60"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [ "Window", "Document", "Element", "HtmlInputElement", "FileList", "File", "Blob" ] }
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+instant = { version = "0.1", features = [ "wasm-bindgen" ] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+instant = "0.1"

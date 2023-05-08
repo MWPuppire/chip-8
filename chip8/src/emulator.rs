@@ -6,6 +6,7 @@ use std::fs;
 
 use instant::Instant;
 
+#[derive(Clone, Debug)]
 pub struct Emulator {
     cpu: CPU,
     has_rom: bool,
@@ -16,7 +17,7 @@ pub struct Emulator {
 impl Emulator {
     pub fn new() -> Emulator {
         Emulator {
-            cpu: CPU::new(Chip8Mode::default()),
+            cpu: CPU::new(Chip8Mode::Cosmac),
             has_rom: false,
             breakpoints: vec!(),
             last_time: Instant::now(),

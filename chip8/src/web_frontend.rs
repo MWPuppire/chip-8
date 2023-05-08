@@ -59,7 +59,7 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
             return;
         }
         let file = files.item(0).unwrap();
-        file.array_buffer().then(&load_rom).catch(&err_cb);
+        let _ = file.array_buffer().then(&load_rom).catch(&err_cb);
     }) as Box<dyn FnMut(JsValue)>);
     rom_input.add_event_listener_with_callback(
         "change",

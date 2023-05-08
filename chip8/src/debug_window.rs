@@ -5,6 +5,7 @@ use winit::event_loop::EventLoopWindowTarget;
 #[cfg(target_arch = "wasm32")]
 extern crate web_sys;
 
+#[derive(Debug)]
 pub struct DebugWindow {
     window: Option<Window>,
 }
@@ -54,28 +55,28 @@ impl DebugWindow {
         // TO-DO
     }
 
-    #[cfg(target_arch = "wasm32")]
-    fn insert_canvas(window: &Window) {
-        use winit::platform::web::WindowExtWebSys;
-        let canvas = window.canvas();
-        let window = web_sys::window().unwrap();
-        let document = window.document().unwrap();
-        let body = document.body().unwrap();
-        body.append_child(&canvas).unwrap();
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn insert_canvas(_: &Window) {
-        unimplemented!();
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn remove_canvas(window: Window) {
-        use winit::platform::web::WindowExtWebSys;
-        let canvas = window.canvas();
-        canvas.remove();
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn remove_canvas(_: Window) {
-        unimplemented!();
+    cfg_if::cfg_if! {
+        if #[cfg(target_arch = "wasm32")] {
+            fn insert_canvas(window: &Window) {
+                use winit::platform::web::WindowExtWebSys;
+                let canvas = window.canvas();
+                let window = web_sys::window().unwrap();
+                let document = window.document().unwrap();
+                let body = document.body().unwrap();
+                body.append_child(&canvas).unwrap();
+            }
+            fn remove_canvas(window: Window) {
+                use winit::platform::web::WindowExtWebSys;
+                let canvas = window.canvas();
+                canvas.remove();
+            }
+        } else {
+            fn insert_canvas(_: &Window) {
+                unimplemented!();
+            }
+            fn remove_canvas(_: Window) {
+                unimplemented!();
+            }
+        }
     }
 }

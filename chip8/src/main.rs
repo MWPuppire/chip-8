@@ -2,27 +2,25 @@ extern crate instant;
 extern crate chip8_lib;
 extern crate softbuffer;
 extern crate winit;
+extern crate cfg_if;
 
-#[cfg(target_arch = "wasm32")]
-extern crate wasm_bindgen;
-#[cfg(target_arch = "wasm32")]
-extern crate web_sys;
-#[cfg(target_arch = "wasm32")]
-extern crate js_sys;
+cfg_if::cfg_if! {
+    if #[cfg(target_arch = "wasm32")] {
+        extern crate wasm_bindgen;
+        extern crate web_sys;
+        extern crate js_sys;
+        extern crate console_error_panic_hook;
+        mod web_frontend;
+        use web_frontend as frontend;
+    } else {
+        mod desktop_frontend;
+        use desktop_frontend as frontend;
+    }
+}
 
 pub mod emulator;
 pub mod log;
 pub mod debug_window;
-
-#[cfg(not(target_arch = "wasm32"))]
-mod desktop_frontend;
-#[cfg(not(target_arch = "wasm32"))]
-use desktop_frontend as frontend;
-
-#[cfg(target_arch = "wasm32")]
-mod web_frontend;
-#[cfg(target_arch = "wasm32")]
-use web_frontend as frontend;
 
 use softbuffer::GraphicsContext;
 use winit::event::{Event, WindowEvent};
@@ -35,6 +33,12 @@ use crate::debug_window::DebugWindow;
 pub const SCALE_FACTOR: usize = 8;
 
 fn main() {
+    cfg_if::cfg_if! {
+        if #[cfg(target_arch = "wasm32")] {
+            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        }
+    }
+
     let event_loop = EventLoop::new();
     let window = frontend::create_window(&event_loop);
     let mut graphics_context = unsafe {
