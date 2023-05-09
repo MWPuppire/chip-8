@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::sync::mpsc::channel;
+use futures::channel::oneshot;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use winit::event_loop::EventLoopWindowTarget;
@@ -37,16 +37,16 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
         .dyn_into::<web_sys::HtmlInputElement>().unwrap();
     let rom_input = Rc::new(rom_input);
 
-    let (sender, receiver) = channel();
+    let (sender, mut receiver) = oneshot::channel();
 
-    let load_rom = Closure::wrap(Box::new(move |value| {
+    let load_rom: Closure<dyn FnMut(JsValue)> = Closure::once(move |value| {
         let mut emu = Emulator::new();
         let buf = js_sys::ArrayBuffer::from(value);
         let buf = js_sys::Uint8Array::new(&buf);
         let vec = buf.to_vec();
         emu.load_rom(&vec[..]).unwrap();
         sender.send(emu).unwrap();
-    }) as Box<dyn FnMut(JsValue)>);
+    });
 
     let err_cb = Closure::wrap(Box::new(move |err| {
         log!("{:?}", err);
@@ -65,8 +65,11 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
         "change",
         input_callback.as_ref().unchecked_ref()
     ).unwrap();
-    input_callback.forget();
 
-    let out = receiver.recv();
-    Ok(out.unwrap())
+    let out = receiver.try_recv();
+    rom_input.remove_event_listener_with_callback(
+        "change",
+        input_callback.as_ref().unchecked_ref()
+    ).unwrap();
+    Ok(out.unwrap().unwrap())
 }
