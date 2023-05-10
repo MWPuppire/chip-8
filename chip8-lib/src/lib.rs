@@ -1,7 +1,7 @@
 #![no_std]
 
 extern crate enum_map;
-extern crate rand;
+extern crate nanorand;
 extern crate cfg_if;
 #[cfg(feature = "std")]
 extern crate std;

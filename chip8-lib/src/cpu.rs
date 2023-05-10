@@ -7,6 +7,8 @@ use crate::font;
 use core::convert::Infallible;
 use core::time::Duration;
 
+use nanorand::{Rng, WyRand};
+
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 #[cfg(feature = "serde")]
@@ -117,6 +119,7 @@ pub struct CPU {
 
     input: [bool; 16],
     awaiting_key: Option<Register>,
+    random_state: WyRand,
 
     #[cfg(feature = "cosmac")]
     pub(crate) vblank_wait: bool,
@@ -146,21 +149,24 @@ pub struct SavedState {
 }
 
 impl CPU {
-    pub fn new(mode: Chip8Mode,) -> CPU {
+    pub fn new(mode: Chip8Mode) -> CPU {
         let mut cpu = CPU {
             cycles_pending: 0.0,
             timers_pending: 0.0,
             mode,
+
             pc: 0x200,
+            index: 0,
+            registers: enum_map::enum_map! { _ => 0 },
             memory: [0; CHIP8_MEM_SIZE],
             screen: Display::new(),
-            registers: enum_map::enum_map! { _ => 0 },
             call_stack: CallStack::new(),
             delay_timer: 0,
             sound_timer: 0,
+
             input: [false; 16],
             awaiting_key: None,
-            index: 0,
+            random_state: WyRand::new(),
 
             #[cfg(feature = "cosmac")]
             vblank_wait: false,
@@ -431,5 +437,9 @@ impl CPU {
         self.delay_timer = state.delay_timer;
         self.sound_timer = state.sound_timer;
         self.awaiting_key = state.awaiting_key;
+    }
+
+    pub fn random(&mut self) -> u8 {
+        self.random_state.generate()
     }
 }
