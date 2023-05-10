@@ -3,6 +3,7 @@ use crate::log;
 
 use std::path::Path;
 use std::fs;
+use std::time::Duration;
 
 use instant::Instant;
 
@@ -24,10 +25,10 @@ impl Emulator {
         }
     }
 
-    fn step(&mut self) -> f64 {
+    fn step(&mut self) -> Duration {
         let last = self.last_time;
         self.last_time = Instant::now();
-        last.elapsed().as_secs_f64()
+        last.elapsed()
     }
 
     pub fn update(&mut self) -> Result<(), Error> {
@@ -36,7 +37,7 @@ impl Emulator {
             return Err(Error::NoRomLoaded);
         }
 
-        self.cpu.emulate_until(dt, &self.breakpoints[..])?;
+        self.cpu.emulate_breakpoints(dt, &self.breakpoints[..])?;
         if self.cpu.should_beep() {
             // TO-DO actually beep
             log!("beep!");

@@ -5,6 +5,7 @@ use crate::display::Display;
 use crate::font;
 
 use core::convert::Infallible;
+use core::time::Duration;
 
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
@@ -210,12 +211,13 @@ impl CPU {
         }
     }
 
-    pub fn emulate(&mut self, dt: f64) -> Result<(), Error> {
+    pub fn emulate_for(&mut self, dur: Duration) -> Result<(), Error> {
         #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
 
+        let dt = dur.as_secs_f64();
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.saturating_sub(timer_diff);
@@ -240,12 +242,13 @@ impl CPU {
         Ok(())
     }
 
-    pub fn emulate_until(&mut self, dt: f64, breakpoints: &[u16]) -> Result<(), Error> {
+    pub fn emulate_breakpoints(&mut self, dur: Duration, breakpoints: &[u16]) -> Result<(), Error> {
         #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
 
+        let dt = dur.as_secs_f64();
         self.timers_pending += dt * TIMER_SPEED;
         let timer_diff = self.timers_pending as u8;
         self.delay_timer = self.delay_timer.saturating_sub(timer_diff);

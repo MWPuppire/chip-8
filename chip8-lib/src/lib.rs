@@ -14,7 +14,7 @@ pub mod cpu;
 pub mod common;
 pub mod register;
 pub mod display;
-pub mod instruction;
+mod instruction;
 mod font;
 
 pub use common::{Error, Chip8Mode};
