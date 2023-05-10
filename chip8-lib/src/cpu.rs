@@ -244,6 +244,15 @@ impl CPU {
         while self.cycles_pending > 0.0 {
             let cycles_taken = self.step()?;
             self.cycles_pending -= cycles_taken as f64;
+
+            // checks for early exit
+            #[cfg(feature = "cosmac")]
+            if self.vblank_wait {
+                return Ok(());
+            }
+            if self.awaiting_key.is_some() {
+                return Ok(());
+            }
         }
         Ok(())
     }
@@ -274,13 +283,22 @@ impl CPU {
         self.cycles_pending += dt * CLOCK_SPEED;
         while self.cycles_pending > 0.0 {
             let cycles_taken = self.step()?;
+            self.cycles_pending -= cycles_taken as f64;
             for i in breakpoints {
                 if self.pc == *i {
                     self.cycles_pending = 0.0;
                     return Err(Error::Breakpoint(self.pc));
                 }
             }
-            self.cycles_pending -= cycles_taken as f64;
+
+            // checks for early exit
+            #[cfg(feature = "cosmac")]
+            if self.vblank_wait {
+                return Ok(());
+            }
+            if self.awaiting_key.is_some() {
+                return Ok(());
+            }
         }
         Ok(())
     }

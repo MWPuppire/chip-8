@@ -197,21 +197,21 @@ impl Instruction {
                 "Vx = Vy;",
             ),
             (0x8,   _,   _, 0x1) => make_instruction!(
-                Some(inst_oreq_register),
+                Some(inst_oreq_register_cosmac),
                 Some(inst_oreq_register),
                 Some(inst_oreq_register),
                 1,
                 "Vx |= Vy;",
             ),
             (0x8,   _,   _, 0x2) => make_instruction!(
-                Some(inst_andeq_register),
+                Some(inst_andeq_register_cosmac),
                 Some(inst_andeq_register),
                 Some(inst_andeq_register),
                 1,
                 "Vx &= Vy;",
             ),
             (0x8,   _,   _, 0x3) => make_instruction!(
-                Some(inst_xoreq_register),
+                Some(inst_xoreq_register_cosmac),
                 Some(inst_xoreq_register),
                 Some(inst_xoreq_register),
                 1,
@@ -233,7 +233,7 @@ impl Instruction {
             ),
             (0x8,   _,   _, 0x6) => make_instruction!(
                 Some(inst_shift_right),
-                Some(inst_shift_right),
+                Some(inst_shift_right_schip),
                 Some(inst_shift_right),
                 1,
                 "Vx = Vy >> 1;",
@@ -247,7 +247,7 @@ impl Instruction {
             ),
             (0x8,   _,   _, 0xE) => make_instruction!(
                 Some(inst_shift_left),
-                Some(inst_shift_left),
+                Some(inst_shift_left_schip),
                 Some(inst_shift_left),
                 1,
                 "Vx = Vy << 1;",
@@ -268,7 +268,7 @@ impl Instruction {
             ),
             (0xB,   _,   _,   _) => make_instruction!(
                 Some(inst_jump_v0),
-                Some(inst_jump_v0),
+                Some(inst_jump_v0_schip),
                 Some(inst_jump_v0),
                 1,
                 "PC = V0 + NNN;",
@@ -387,14 +387,14 @@ impl Instruction {
             ),
             (0xF,   _, 0x5, 0x5) => make_instruction!(
                 Some(inst_reg_dump),
-                Some(inst_reg_dump),
+                Some(inst_reg_dump_schip),
                 Some(inst_reg_dump),
                 1,
                 "reg_dump(V0, Vx, &I);",
             ),
             (0xF,   _, 0x6, 0x5) => make_instruction!(
                 Some(inst_reg_load),
-                Some(inst_reg_load),
+                Some(inst_reg_load_schip),
                 Some(inst_reg_load),
                 1,
                 "reg_load(V0, Vx, &I);",

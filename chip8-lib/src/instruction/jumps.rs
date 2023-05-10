@@ -16,7 +16,15 @@ pub fn inst_return(cpu: &mut CPU, _: u16) -> u32 {
     0
 }
 
+#[cfg(any(feature = "cosmac", feature = "xo-chip"))]
 pub fn inst_jump_v0(cpu: &mut CPU, inst: u16) -> u32 {
+    let base = inst & 0xFFF;
+    cpu.pc = base + cpu.registers[Register::V0] as u16;
+    0
+}
+
+#[cfg(feature = "super-chip")]
+pub fn inst_jump_v0_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let base = inst & 0xFFF;
     let reg = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
     cpu.pc = base + cpu.registers[reg] as u16;

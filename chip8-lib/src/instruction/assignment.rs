@@ -13,7 +13,19 @@ pub fn inst_set_index(cpu: &mut CPU, inst: u16) -> u32 {
     0
 }
 
+#[cfg(any(feature = "cosmac", feature = "xo-chip"))]
 pub fn inst_reg_dump(cpu: &mut CPU, inst: u16) -> u32 {
+    let max = (((inst >> 8) & 0xF) + 1) as u8;
+    for i in 0..max {
+        let reg = Register::from_index(i).unwrap();
+        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg]).unwrap();
+    }
+    cpu.index += max as u16;
+    0
+}
+
+#[cfg(feature = "super-chip")]
+pub fn inst_reg_dump_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let max = (((inst >> 8) & 0xF) + 1) as u8;
     for i in 0..max {
         let reg = Register::from_index(i).unwrap();
@@ -22,7 +34,19 @@ pub fn inst_reg_dump(cpu: &mut CPU, inst: u16) -> u32 {
     0
 }
 
+#[cfg(any(feature = "cosmac", feature = "xo-chip"))]
 pub fn inst_reg_load(cpu: &mut CPU, inst: u16) -> u32 {
+    let max = (((inst >> 8) & 0xF) + 1) as u8;
+    for i in 0..max {
+        let reg = Register::from_index(i).unwrap();
+        cpu.registers[reg] = cpu.read_memory_byte(cpu.index + i as u16).unwrap();
+    }
+    cpu.index += max as u16;
+    0
+}
+
+#[cfg(feature = "super-chip")]
+pub fn inst_reg_load_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let max = (((inst >> 8) & 0xF) + 1) as u8;
     for i in 0..max {
         let reg = Register::from_index(i).unwrap();
