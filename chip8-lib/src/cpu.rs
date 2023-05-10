@@ -20,8 +20,8 @@ const CLOCK_SPEED: f64 = 500.0;
 pub const CHIP8_MEM_SIZE: usize = 4096;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "std")] {
-        use std::vec::Vec;
+    if #[cfg(feature = "alloc")] {
+        use alloc::vec::Vec;
 
         #[repr(transparent)]
         #[derive(Clone, Debug, Default)]
@@ -44,7 +44,7 @@ cfg_if::cfg_if! {
 
         impl<'a> IntoIterator for &'a CallStack {
             type Item = &'a u16;
-            type IntoIter = std::slice::Iter<'a, u16>;
+            type IntoIter = core::slice::Iter<'a, u16>;
 
             fn into_iter(self) -> Self::IntoIter {
                 self.stack.iter()

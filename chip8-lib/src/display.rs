@@ -1,5 +1,5 @@
-#[cfg(feature = "std")]
-use std::{vec, vec::Vec};
+#[cfg(feature = "alloc")]
+use alloc::{vec, vec::Vec};
 
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
@@ -106,7 +106,7 @@ impl Display {
         self.buffer.fill(false);
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     pub fn to_buffer(&self, scale_x: usize, scale_y: usize) -> Vec<u32> {
         if scale_x == 0 || scale_y == 0 {
             return vec![];

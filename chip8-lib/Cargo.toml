@@ -5,7 +5,8 @@ edition = "2021"
 
 [features]
 default = ["cosmac", "std", "serde"]
-std = ["nanorand/std", "serde/std", "getrandom/std"]
+alloc = ["nanorand/alloc", "serde/alloc"]
+std = ["nanorand/std", "serde/std", "getrandom/std", "alloc"]
 cosmac = []
 super-chip = []
 xo-chip = []
