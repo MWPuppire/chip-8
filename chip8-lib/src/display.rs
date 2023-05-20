@@ -122,3 +122,9 @@ impl Display {
         out
     }
 }
+
+impl Default for Display {
+    fn default() -> Self {
+        Self::new()
+    }
+}

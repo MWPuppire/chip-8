@@ -26,7 +26,7 @@ pub fn inst_jump_v0(cpu: &mut CPU, inst: u16) -> u32 {
 #[cfg(feature = "super-chip")]
 pub fn inst_jump_v0_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let base = inst & 0xFFF;
-    let reg = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
+    let reg = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
     cpu.pc = base + cpu.registers[reg] as u16;
     0
 }

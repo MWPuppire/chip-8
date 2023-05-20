@@ -5,8 +5,8 @@ use crate::display;
 #[cfg(feature = "cosmac")]
 pub fn inst_draw_cosmac(cpu: &mut CPU, inst: u16) -> u32 {
     cpu.vblank_wait = true;
-    let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
-    let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
+    let reg_x = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
+    let reg_y = (((inst >> 4) & 0xF) as u8).try_into().unwrap();
     let x = cpu.registers[reg_x] % display::LOWRES_SCREEN_WIDTH as u8;
     let y = cpu.registers[reg_y] % display::LOWRES_SCREEN_HEIGHT as u8;
     let n = (inst & 0xF) as u8;
@@ -29,8 +29,8 @@ pub fn inst_draw_schip(cpu: &mut CPU, inst: u16) -> u32 {
     } else {
         display::LOWRES_SCREEN_DIMENSIONS
     };
-    let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
-    let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
+    let reg_x = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
+    let reg_y = (((inst >> 4) & 0xF) as u8).try_into().unwrap();
     let x = cpu.registers[reg_x] % dimensions.0 as u8;
     let y = cpu.registers[reg_y] % dimensions.1 as u8;
     let n = (inst & 0xF) as u8;
@@ -53,8 +53,8 @@ pub fn inst_draw_xochip(cpu: &mut CPU, inst: u16) -> u32 {
     } else {
         display::LOWRES_SCREEN_DIMENSIONS
     };
-    let reg_x = Register::from_index(((inst >> 8) & 0xF) as u8).unwrap();
-    let reg_y = Register::from_index(((inst >> 4) & 0xF) as u8).unwrap();
+    let reg_x = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
+    let reg_y = (((inst >> 4) & 0xF) as u8).try_into().unwrap();
     let x = cpu.registers[reg_x] % dimensions.0 as u8;
     let y = cpu.registers[reg_y] % dimensions.1 as u8;
     let n = (inst & 0xF) as u8;

@@ -1,7 +1,18 @@
+use core::fmt;
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
-#[derive(enum_map::Enum, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct RegisterOutOfRange;
+impl fmt::Display for RegisterOutOfRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt("CHIP-8 register index out of range (must be 0x0-0xF)", f)
+    }
+}
+#[cfg(feature = "std")]
+impl std::error::Error for RegisterOutOfRange { }
+
+#[derive(enum_map::Enum, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum Register {
@@ -24,28 +35,6 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn from_index(idx: u8) -> Option<Register> {
-        match idx {
-            0x0 => Some(Register::V0),
-            0x1 => Some(Register::V1),
-            0x2 => Some(Register::V2),
-            0x3 => Some(Register::V3),
-            0x4 => Some(Register::V4),
-            0x5 => Some(Register::V5),
-            0x6 => Some(Register::V6),
-            0x7 => Some(Register::V7),
-            0x8 => Some(Register::V8),
-            0x9 => Some(Register::V9),
-            0xA => Some(Register::VA),
-            0xB => Some(Register::VB),
-            0xC => Some(Register::VC),
-            0xD => Some(Register::VD),
-            0xE => Some(Register::VE),
-            0xF => Some(Register::VF),
-            _ => None
-        }
-    }
-
     pub fn by_name(name: &str) -> Option<Register> {
         if name == "v0" || name == "V0" {
             Some(Register::V0)
@@ -82,5 +71,59 @@ impl Register {
         } else {
             None
         }
+    }
+}
+
+impl TryFrom<u8> for Register {
+    type Error = RegisterOutOfRange;
+    fn try_from(item: u8) -> Result<Self, RegisterOutOfRange> {
+        match item {
+            0x0 => Ok(Self::V0),
+            0x1 => Ok(Self::V1),
+            0x2 => Ok(Self::V2),
+            0x3 => Ok(Self::V3),
+            0x4 => Ok(Self::V4),
+            0x5 => Ok(Self::V5),
+            0x6 => Ok(Self::V6),
+            0x7 => Ok(Self::V7),
+            0x8 => Ok(Self::V8),
+            0x9 => Ok(Self::V9),
+            0xA => Ok(Self::VA),
+            0xB => Ok(Self::VB),
+            0xC => Ok(Self::VC),
+            0xD => Ok(Self::VD),
+            0xE => Ok(Self::VE),
+            0xF => Ok(Self::VF),
+            _ => Err(RegisterOutOfRange),
+        }
+    }
+}
+
+impl From<Register> for u8 {
+    fn from(item: Register) -> Self {
+        item as u8
+    }
+}
+
+impl fmt::Display for Register {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(match self {
+            Self::V0 => "V0",
+            Self::V1 => "V1",
+            Self::V2 => "V2",
+            Self::V3 => "V3",
+            Self::V4 => "V4",
+            Self::V5 => "V5",
+            Self::V6 => "V6",
+            Self::V7 => "V7",
+            Self::V8 => "V8",
+            Self::V9 => "V9",
+            Self::VA => "VA",
+            Self::VB => "VB",
+            Self::VC => "VC",
+            Self::VD => "VD",
+            Self::VE => "VE",
+            Self::VF => "VF",
+        }, f)
     }
 }
