@@ -6,7 +6,7 @@ use crate::font;
 
 use core::time::Duration;
 
-use nanorand::{Rng, WyRand};
+use nanorand::{Rng, WyRand, SeedableRng};
 
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
@@ -143,6 +143,7 @@ pub struct SavedState {
     delay_timer: u8,
     sound_timer: u8,
     awaiting_key: Option<Register>,
+    seed: [u8; 8],
     #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
     persistent_registers: enum_map::EnumMap<Register, u8>
 }
@@ -415,11 +416,14 @@ impl CPU {
         }
     }
 
-    pub fn save_state(&self) -> Result<SavedState, Error> {
+    pub fn save_state(&mut self) -> Result<SavedState, Error> {
         #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
         }
+        let seed = self.random_state.rand();
+        // for consistency of random state in saved states
+        self.random_state.reseed(seed);
         Ok(SavedState {
             mode: self.mode,
             pc: self.pc,
@@ -431,6 +435,7 @@ impl CPU {
             delay_timer: self.delay_timer,
             sound_timer: self.sound_timer,
             awaiting_key: self.awaiting_key,
+            seed,
             #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
             persistent_registers: self.persistent_registers,
         })
@@ -462,6 +467,7 @@ impl CPU {
         self.delay_timer = state.delay_timer;
         self.sound_timer = state.sound_timer;
         self.awaiting_key = state.awaiting_key;
+        self.random_state.reseed(state.seed);
     }
 
     pub fn random(&mut self) -> u8 {
