@@ -4,7 +4,6 @@ use crate::instruction::Instruction;
 use crate::display::Display;
 use crate::font;
 
-use core::convert::Infallible;
 use core::time::Duration;
 
 use nanorand::{Rng, WyRand};
@@ -17,7 +16,7 @@ use serde_big_array::BigArray;
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
 
-pub const CHIP8_MEM_SIZE: usize = 4096;
+pub const CHIP8_MEM_SIZE: usize = 0x1000;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "alloc")] {
@@ -319,12 +318,16 @@ impl CPU {
         // TODO raise error instead of no-op if no return address?
     }
 
-    pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Infallible> {
-        Ok(self.memory[pos as usize])
+    pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
+        if pos > 0xFFF {
+            Err(Error::OutOfBounds)
+        } else {
+            Ok(self.memory[pos as usize])
+        }
     }
 
     pub fn read_memory_word(&self, pos: u16) -> Result<u16, Error> {
-        if pos == 0xFFFF {
+        if pos >= 0xFFF {
             Err(Error::OutOfBounds)
         } else {
             let byte1 = self.memory[pos as usize];
@@ -333,13 +336,17 @@ impl CPU {
         }
     }
 
-    pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Infallible> {
-        self.memory[pos as usize] = byte;
-        Ok(())
+    pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Error> {
+        if pos > 0xFFF {
+            Err(Error::OutOfBounds)
+        } else {
+            self.memory[pos as usize] = byte;
+            Ok(())
+        }
     }
 
     pub fn write_memory_word(&mut self, pos: u16, word: u16) -> Result<(), Error> {
-        if pos == 0xFFFF {
+        if pos >= 0xFFF {
             Err(Error::OutOfBounds)
         } else {
             self.memory[pos as usize] = (word >> 8) as u8;

@@ -37,6 +37,6 @@ pub fn inst_subtract_register(cpu: &mut CPU, inst: u16) -> u32 {
 
 pub fn inst_add_to_index(cpu: &mut CPU, inst: u16) -> u32 {
     let reg = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
-    cpu.index = cpu.index.wrapping_add(cpu.registers[reg] as u16);
+    cpu.index = (cpu.index + cpu.registers[reg] as u16) & 0xFFF;
     0
 }
