@@ -2,6 +2,7 @@
 name = "chip8-lib"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.61"
 
 [features]
 default = ["cosmac", "std", "serde"]
@@ -16,7 +17,7 @@ getrandom-js = ["getrandom/js"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enum-map = "2.4"
+enum-map = "2.5"
 nanorand = { version = "0.7", default-features = false, features = [ "wyrand", "getrandom", "rdseed" ] }
 cfg-if = "1.0"
 serde = { version = "1.0", default-features = false, features = [ "derive" ], optional = true }

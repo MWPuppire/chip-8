@@ -30,60 +30,72 @@ impl std::error::Error for Error { }
 
 cfg_if::cfg_if! {
     if #[cfg(all(feature = "cosmac", feature = "super-chip", feature = "xo-chip"))] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             Cosmac = 0,
             SuperChip = 1,
             XoChip = 2,
         }
     } else if #[cfg(all(feature = "cosmac", feature = "super-chip"))] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             Cosmac = 0,
             SuperChip = 1,
         }
     } else if #[cfg(all(feature = "cosmac", feature = "xo-chip"))] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             Cosmac = 0,
             XoChip = 2,
         }
     } else if #[cfg(all(feature = "super-chip", feature = "xo-chip"))] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             SuperChip = 1,
             XoChip = 2,
         }
     } else if #[cfg(feature = "cosmac")] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             Cosmac = 0,
         }
     } else if #[cfg(feature = "super-chip")] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             SuperChip = 1,
         }
     } else if #[cfg(feature = "xo-chip")] {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode {
-            #[default]
             XoChip = 2,
         }
     } else {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        pub enum Chip8Mode { }
         compile_error!("Must enable one of the interpreter features for `chip8-lib`: `cosmac`, `super-chip`, `xo-chip`");
+    }
+}
+
+impl Default for Chip8Mode {
+    fn default() -> Self {
+        cfg_if::cfg_if! {
+            // arbitrary ordering of Super-Chip versus XO-CHIP; Cosmac as
+            // default, if enabled, makes sense though
+            if #[cfg(feature = "cosmac")] {
+                Self::Cosmac
+            } else if #[cfg(feature = "super-chip")] {
+                Self::SuperChip
+            } else if #[cfg(feature = "xo-chip")] {
+                Self::XoChip
+            }
+        }
     }
 }
