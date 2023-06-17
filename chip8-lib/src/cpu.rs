@@ -1,15 +1,15 @@
-use crate::{Error, Chip8Mode};
-use crate::Register;
-use crate::instruction::Instruction;
 use crate::display::Display;
 use crate::font;
+use crate::instruction::Instruction;
+use crate::Register;
+use crate::{Chip8Mode, Error};
 
 use core::time::Duration;
 
-use nanorand::{Rng, WyRand, SeedableRng};
+use nanorand::{Rng, SeedableRng, WyRand};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_big_array::BigArray;
 
@@ -105,7 +105,7 @@ cfg_if::cfg_if! {
 pub struct CPU {
     cycles_pending: f64,
     timers_pending: f64,
-    mode: Chip8Mode,
+    pub mode: Chip8Mode,
 
     pub pc: u16,
     pub index: u16,
@@ -145,7 +145,7 @@ pub struct SavedState {
     awaiting_key: Option<Register>,
     seed: [u8; 8],
     #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
-    persistent_registers: enum_map::EnumMap<Register, u8>
+    persistent_registers: enum_map::EnumMap<Register, u8>,
 }
 
 impl CPU {
@@ -374,10 +374,6 @@ impl CPU {
             // TODO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = true;
-            if let Some(reg) = self.awaiting_key {
-                self.registers[reg] = key;
-                self.awaiting_key = None;
-            }
         }
     }
 
@@ -386,6 +382,10 @@ impl CPU {
             // TODO raise error instead of no-op if out-of-bounds?
         } else {
             self.input[key as usize] = false;
+            if let Some(reg) = self.awaiting_key {
+                self.registers[reg] = key;
+                self.awaiting_key = None;
+            }
         }
     }
 
@@ -472,5 +472,9 @@ impl CPU {
 
     pub fn random(&mut self) -> u8 {
         self.random_state.generate()
+    }
+
+    pub fn reseed(&mut self, seed: u64) {
+        self.random_state = WyRand::new_seed(seed);
     }
 }

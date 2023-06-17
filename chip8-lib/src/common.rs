@@ -1,6 +1,6 @@
 use core::fmt;
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -13,7 +13,7 @@ pub enum Error {
     NotDefined(&'static str),
 }
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::UnknownOpcode(op) => write!(f, "unknown opcode {:04x}", op),
             Self::Breakpoint(at) => write!(f, "reached breakpoint at {:04x}", at),
@@ -26,7 +26,7 @@ impl fmt::Display for Error {
     }
 }
 #[cfg(feature = "std")]
-impl std::error::Error for Error { }
+impl std::error::Error for Error {}
 
 cfg_if::cfg_if! {
     if #[cfg(all(feature = "cosmac", feature = "super-chip", feature = "xo-chip"))] {
@@ -81,6 +81,19 @@ cfg_if::cfg_if! {
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Chip8Mode { }
         compile_error!("Must enable one of the interpreter features for `chip8-lib`: `cosmac`, `super-chip`, `xo-chip`");
+    }
+}
+
+impl fmt::Display for Chip8Mode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            #[cfg(feature = "cosmac")]
+            Self::Cosmac => write!(f, "Cosmac CHIP-8"),
+            #[cfg(feature = "super-chip")]
+            Self::SuperChip => write!(f, "Super-CHIP"),
+            #[cfg(feature = "xo-chip")]
+            Self::XoChip => write!(f, "XO-CHIP"),
+        }
     }
 }
 

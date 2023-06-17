@@ -1,8 +1,8 @@
-use chip8_lib::{Error, CPU, Chip8Mode};
 use crate::log;
+use chip8_lib::{Chip8Mode, Error, CPU};
 
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 use std::time::Duration;
 
 use instant::Instant;
@@ -20,7 +20,7 @@ impl Emulator {
         Emulator {
             cpu: CPU::new(Chip8Mode::Cosmac),
             has_rom: false,
-            breakpoints: vec!(),
+            breakpoints: vec![],
             last_time: Instant::now(),
         }
     }

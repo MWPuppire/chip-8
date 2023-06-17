@@ -1,6 +1,6 @@
+use crate::display;
 use crate::Register;
 use crate::CPU;
-use crate::display;
 
 #[cfg(feature = "cosmac")]
 pub fn inst_draw_cosmac(cpu: &mut CPU, inst: u16) -> u32 {
@@ -63,10 +63,9 @@ pub fn inst_draw_xochip(cpu: &mut CPU, inst: u16) -> u32 {
         let byte = cpu.read_memory_byte(idx).unwrap();
         for bit in 0..8 {
             if (byte << bit) & 128 == 128 {
-                flag |= cpu.screen.write_to_screen(
-                    (x + bit) % dimensions.0 as u8,
-                    (y + i) % dimensions.1 as u8
-                );
+                flag |= cpu
+                    .screen
+                    .write_to_screen((x + bit) % dimensions.0 as u8, (y + i) % dimensions.1 as u8);
             }
         }
     }

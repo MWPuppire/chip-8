@@ -63,7 +63,7 @@ pub fn inst_shift_right(cpu: &mut CPU, inst: u16) -> u32 {
 }
 
 #[cfg(feature = "super-chip")]
-pub fn inst_shift_right(cpu: &mut CPU, inst: u16) -> u32 {
+pub fn inst_shift_right_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let reg = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
     let value = cpu.registers[reg];
     cpu.registers[reg] = value >> 1;
@@ -82,7 +82,7 @@ pub fn inst_shift_left(cpu: &mut CPU, inst: u16) -> u32 {
 }
 
 #[cfg(feature = "super-chip")]
-pub fn inst_shift_left(cpu: &mut CPU, inst: u16) -> u32 {
+pub fn inst_shift_left_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let reg = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
     let value = cpu.registers[reg];
     cpu.registers[reg] = value << 1;

@@ -17,7 +17,8 @@ pub fn inst_reg_dump(cpu: &mut CPU, inst: u16) -> u32 {
     let max = (((inst >> 8) & 0xF) + 1) as u8;
     for i in 0..max {
         let reg = i.try_into().unwrap();
-        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg]).unwrap();
+        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg])
+            .unwrap();
     }
     cpu.index = (cpu.index + max as u16) & 0xFFF;
     0
@@ -28,7 +29,8 @@ pub fn inst_reg_dump_schip(cpu: &mut CPU, inst: u16) -> u32 {
     let max = (((inst >> 8) & 0xF) + 1) as u8;
     for i in 0..max {
         let reg = i.try_into().unwrap();
-        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg]).unwrap();
+        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg])
+            .unwrap();
     }
     0
 }

@@ -2,14 +2,14 @@
 use alloc::{vec, vec::Vec};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_big_array::BigArray;
 
-pub const LOWRES_SCREEN_WIDTH:   usize = 64;
-pub const LOWRES_SCREEN_HEIGHT:  usize = 32;
+pub const LOWRES_SCREEN_WIDTH: usize = 64;
+pub const LOWRES_SCREEN_HEIGHT: usize = 32;
 pub const LOWRES_SCREEN_DIMENSIONS: (usize, usize) = (LOWRES_SCREEN_WIDTH, LOWRES_SCREEN_HEIGHT);
-pub const HIGHRES_SCREEN_WIDTH:  usize = 128;
+pub const HIGHRES_SCREEN_WIDTH: usize = 128;
 pub const HIGHRES_SCREEN_HEIGHT: usize = 64;
 pub const HIGHRES_SCREEN_DIMENSIONS: (usize, usize) = (HIGHRES_SCREEN_WIDTH, HIGHRES_SCREEN_HEIGHT);
 cfg_if::cfg_if! {
@@ -114,9 +114,9 @@ impl Display {
         let mut out = Vec::with_capacity(scale_x * scale_y * SCREEN_WIDTH * SCREEN_HEIGHT);
         for row in self.buffer.chunks(SCREEN_WIDTH) {
             for _ in 0..scale_y {
-                out.extend(row.iter().flat_map(|set|
+                out.extend(row.iter().flat_map(|set| {
                     vec![if *set { 0xFFFFFFFFu32 } else { 0x00000000u32 }; scale_x].into_iter()
-                ));
+                }));
             }
         }
         out

@@ -1,22 +1,25 @@
-use std::rc::Rc;
-use futures::channel::oneshot;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use winit::event_loop::EventLoopWindowTarget;
-use winit::window::{WindowBuilder, Window};
-use winit::platform::web::WindowBuilderExtWebSys;
-use winit::dpi::LogicalSize;
+use crate::log;
 use crate::Emulator;
 use crate::SCALE_FACTOR;
-use crate::log;
+use chip8_lib::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use chip8_lib::Error;
-use chip8_lib::display::{SCREEN_WIDTH, SCREEN_HEIGHT};
+use futures::channel::oneshot;
+use std::rc::Rc;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use winit::dpi::LogicalSize;
+use winit::event_loop::EventLoopWindowTarget;
+use winit::platform::web::WindowBuilderExtWebSys;
+use winit::window::{Window, WindowBuilder};
 
 pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
-    let canvas = document.create_element("canvas").unwrap()
-        .dyn_into::<web_sys::HtmlCanvasElement>().unwrap();
+    let canvas = document
+        .create_element("canvas")
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .unwrap();
 
     let body = document.body().unwrap();
     body.append_child(&canvas).unwrap();
@@ -24,17 +27,21 @@ pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
         .with_resizable(false)
         .with_inner_size(LogicalSize::new(
             (SCALE_FACTOR * SCREEN_WIDTH) as f64,
-            (SCALE_FACTOR * SCREEN_HEIGHT) as f64
+            (SCALE_FACTOR * SCREEN_HEIGHT) as f64,
         ))
         .with_canvas(Some(canvas))
-        .build(target).unwrap()
+        .build(target)
+        .unwrap()
 }
 
 pub fn load_rom_file() -> Result<Emulator, Error> {
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
-    let rom_input = document.get_element_by_id("rom-file").unwrap()
-        .dyn_into::<web_sys::HtmlInputElement>().unwrap();
+    let rom_input = document
+        .get_element_by_id("rom-file")
+        .unwrap()
+        .dyn_into::<web_sys::HtmlInputElement>()
+        .unwrap();
     let rom_input = Rc::new(rom_input);
 
     let (sender, mut receiver) = oneshot::channel();
@@ -61,15 +68,13 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
         let file = files.item(0).unwrap();
         let _ = file.array_buffer().then(&load_rom).catch(&err_cb);
     }) as Box<dyn FnMut(JsValue)>);
-    rom_input.add_event_listener_with_callback(
-        "change",
-        input_callback.as_ref().unchecked_ref()
-    ).unwrap();
+    rom_input
+        .add_event_listener_with_callback("change", input_callback.as_ref().unchecked_ref())
+        .unwrap();
 
     let out = receiver.try_recv();
-    rom_input.remove_event_listener_with_callback(
-        "change",
-        input_callback.as_ref().unchecked_ref()
-    ).unwrap();
+    rom_input
+        .remove_event_listener_with_callback("change", input_callback.as_ref().unchecked_ref())
+        .unwrap();
     Ok(out.unwrap().unwrap())
 }

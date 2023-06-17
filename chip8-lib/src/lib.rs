@@ -1,24 +1,24 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate enum_map;
-extern crate nanorand;
-extern crate cfg_if;
-#[cfg(feature = "std")]
-extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
+extern crate cfg_if;
+extern crate enum_map;
+extern crate nanorand;
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(feature = "serde")]
 extern crate serde_big_array;
+#[cfg(feature = "std")]
+extern crate std;
 
-pub mod cpu;
 pub mod common;
-pub mod register;
+pub mod cpu;
 pub mod display;
-mod instruction;
 mod font;
+mod instruction;
+pub mod register;
 
-pub use common::{Error, Chip8Mode};
+pub use common::{Chip8Mode, Error};
 pub use cpu::CPU;
 pub use register::Register;

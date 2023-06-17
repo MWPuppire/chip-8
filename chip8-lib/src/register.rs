@@ -1,6 +1,6 @@
 use core::fmt;
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RegisterOutOfRange;
@@ -10,7 +10,7 @@ impl fmt::Display for RegisterOutOfRange {
     }
 }
 #[cfg(feature = "std")]
-impl std::error::Error for RegisterOutOfRange { }
+impl std::error::Error for RegisterOutOfRange {}
 
 #[derive(enum_map::Enum, Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -107,23 +107,26 @@ impl From<Register> for u8 {
 
 impl fmt::Display for Register {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(match self {
-            Self::V0 => "V0",
-            Self::V1 => "V1",
-            Self::V2 => "V2",
-            Self::V3 => "V3",
-            Self::V4 => "V4",
-            Self::V5 => "V5",
-            Self::V6 => "V6",
-            Self::V7 => "V7",
-            Self::V8 => "V8",
-            Self::V9 => "V9",
-            Self::VA => "VA",
-            Self::VB => "VB",
-            Self::VC => "VC",
-            Self::VD => "VD",
-            Self::VE => "VE",
-            Self::VF => "VF",
-        }, f)
+        fmt::Display::fmt(
+            match self {
+                Self::V0 => "V0",
+                Self::V1 => "V1",
+                Self::V2 => "V2",
+                Self::V3 => "V3",
+                Self::V4 => "V4",
+                Self::V5 => "V5",
+                Self::V6 => "V6",
+                Self::V7 => "V7",
+                Self::V8 => "V8",
+                Self::V9 => "V9",
+                Self::VA => "VA",
+                Self::VB => "VB",
+                Self::VC => "VC",
+                Self::VD => "VD",
+                Self::VE => "VE",
+                Self::VF => "VF",
+            },
+            f,
+        )
     }
 }

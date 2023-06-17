@@ -3,3 +3,4 @@ members = [
 	"chip8-lib",
 	"chip8",
 ]
+resolver = "2"

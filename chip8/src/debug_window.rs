@@ -1,6 +1,6 @@
-use winit::window::{Window, WindowId};
 use winit::event::WindowEvent;
 use winit::event_loop::EventLoopWindowTarget;
+use winit::window::{Window, WindowId};
 
 #[cfg(target_arch = "wasm32")]
 extern crate web_sys;
@@ -12,9 +12,7 @@ pub struct DebugWindow {
 
 impl DebugWindow {
     pub fn new() -> Self {
-        DebugWindow {
-            window: None,
-        }
+        DebugWindow { window: None }
     }
     pub fn open<T>(&mut self, target: &EventLoopWindowTarget<T>) {
         if self.window.is_some() {
@@ -45,13 +43,13 @@ impl DebugWindow {
             unsafe { WindowId::dummy() }
         }
     }
-    pub fn handle_event<'a>(&mut self, event: WindowEvent<'a>) {
+    pub fn handle_event(&mut self, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => self.close(),
-            _ => {},
+            _ => {}
         }
     }
-    pub fn put_text<'a>(&mut self, _: &'a str) {
+    pub fn put_text(&mut self, _: &str) {
         // TO-DO
     }
 
