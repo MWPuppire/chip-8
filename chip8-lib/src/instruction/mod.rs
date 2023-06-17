@@ -23,13 +23,13 @@ type OpcodeExecute = fn(&mut CPU, u16) -> u32;
 
 pub(crate) struct Instruction {
     #[cfg(feature = "cosmac")]
-    pub cosmac: Option<OpcodeExecute>,
+    pub(crate) cosmac: Option<OpcodeExecute>,
     #[cfg(feature = "super-chip")]
-    pub schip: Option<OpcodeExecute>,
+    pub(crate) schip: Option<OpcodeExecute>,
     #[cfg(feature = "xo-chip")]
-    pub xochip: Option<OpcodeExecute>,
-    pub cycles: u32,
-    pub disassembly: &'static str,
+    pub(crate) xochip: Option<OpcodeExecute>,
+    pub(crate) cycles: u32,
+    pub(crate) disassembly: &'static str,
 }
 
 #[allow(dead_code)]
@@ -54,7 +54,7 @@ macro_rules! make_instruction {
 }
 
 impl Instruction {
-    pub fn lookup(opcode: u16) -> Option<Instruction> {
+    pub(crate) fn lookup(opcode: u16) -> Option<Instruction> {
         match (
             (opcode >> 12) & 0xF,
             (opcode >> 8) & 0xF,
@@ -381,7 +381,7 @@ impl Instruction {
             _ => None,
         }
     }
-    pub fn disassemble(opcode: u16) -> Option<&'static str> {
+    pub(crate) fn disassemble(opcode: u16) -> Option<&'static str> {
         Self::lookup(opcode).map(|x| x.disassembly)
     }
 }

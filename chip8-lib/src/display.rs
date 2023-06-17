@@ -34,6 +34,7 @@ pub struct Display {
 }
 
 impl Display {
+    #[inline]
     pub fn new() -> Display {
         Display {
             buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -51,6 +52,7 @@ impl Display {
         toggle
     }
 
+    #[inline]
     pub fn write_pixel(&mut self, x: u8, y: u8) -> bool {
         if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
             false
@@ -89,11 +91,13 @@ impl Display {
         }
     }
 
+    #[inline]
     pub fn read_pixel_unchecked(&self, x: u8, y: u8) -> bool {
         let pos = x as usize + (y as usize) * SCREEN_WIDTH;
         self.buffer[pos]
     }
 
+    #[inline]
     pub fn read_pixel(&self, x: u8, y: u8) -> bool {
         if x >= SCREEN_WIDTH as u8 || y >= SCREEN_HEIGHT as u8 {
             false
@@ -102,6 +106,7 @@ impl Display {
         }
     }
 
+    #[inline]
     pub fn clear(&mut self) {
         self.buffer.fill(false);
     }
@@ -124,6 +129,7 @@ impl Display {
 }
 
 impl Default for Display {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

@@ -98,6 +98,7 @@ impl fmt::Display for Chip8Mode {
 }
 
 impl Default for Chip8Mode {
+    #[inline]
     fn default() -> Self {
         cfg_if::cfg_if! {
             // arbitrary ordering of Super-Chip versus XO-CHIP; Cosmac as

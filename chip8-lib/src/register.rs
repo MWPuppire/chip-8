@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RegisterOutOfRange;
 impl fmt::Display for RegisterOutOfRange {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt("CHIP-8 register index out of range (must be 0x0-0xF)", f)
     }
@@ -100,6 +101,7 @@ impl TryFrom<u8> for Register {
 }
 
 impl From<Register> for u8 {
+    #[inline]
     fn from(item: Register) -> Self {
         item as u8
     }

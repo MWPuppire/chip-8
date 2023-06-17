@@ -30,12 +30,15 @@ cfg_if::cfg_if! {
         }
 
         impl CallStack {
+            #[inline]
             pub fn new() -> Self {
                 Self::default()
             }
+            #[inline]
             pub fn push(&mut self, addr: u16) {
                 self.stack.push(addr);
             }
+            #[inline]
             pub fn pop(&mut self) -> Option<u16> {
                 self.stack.pop()
             }
@@ -45,6 +48,7 @@ cfg_if::cfg_if! {
             type Item = &'a u16;
             type IntoIter = core::slice::Iter<'a, u16>;
 
+            #[inline]
             fn into_iter(self) -> Self::IntoIter {
                 self.stack.iter()
             }
@@ -61,6 +65,7 @@ cfg_if::cfg_if! {
         }
 
         impl CallStack {
+            #[inline]
             pub fn new() -> Self {
                 CallStack {
                     call_stack: [0; CALL_STACK_SIZE],
@@ -84,6 +89,7 @@ cfg_if::cfg_if! {
                 }
             }
         }
+        #[inline]
         impl Default for CallStack {
             fn default() -> Self {
                 Self::new()
@@ -94,6 +100,7 @@ cfg_if::cfg_if! {
             type Item = &'a u16;
             type IntoIter = core::slice::Iter<'a, u16>;
 
+            #[inline]
             fn into_iter(self) -> Self::IntoIter {
                 self.call_stack[0..self.call_stack_idx].iter()
             }
@@ -180,6 +187,7 @@ impl CPU {
         cpu
     }
 
+    #[inline]
     fn clear_memory(&mut self) {
         self.memory.fill(0);
         self.memory[0x50..0xA0].copy_from_slice(&font::FONT_SET);
@@ -303,15 +311,18 @@ impl CPU {
         Ok(())
     }
 
+    #[inline]
     pub fn should_beep(&self) -> bool {
         self.sound_timer > 0
     }
 
+    #[inline]
     pub(crate) fn call_routine(&mut self, pos: u16) {
         self.call_stack.push(self.pc);
         self.pc = pos;
     }
 
+    #[inline]
     pub(crate) fn return_routine(&mut self) {
         if let Some(addr) = self.call_stack.pop() {
             self.pc = addr;
@@ -319,6 +330,7 @@ impl CPU {
         // TODO raise error instead of no-op if no return address?
     }
 
+    #[inline]
     pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
         if pos > 0xFFF {
             Err(Error::OutOfBounds)
@@ -327,6 +339,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn read_memory_word(&self, pos: u16) -> Result<u16, Error> {
         if pos >= 0xFFF {
             Err(Error::OutOfBounds)
@@ -337,6 +350,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Error> {
         if pos > 0xFFF {
             Err(Error::OutOfBounds)
@@ -346,6 +360,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn write_memory_word(&mut self, pos: u16, word: u16) -> Result<(), Error> {
         if pos >= 0xFFF {
             Err(Error::OutOfBounds)
@@ -356,6 +371,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn is_key_down(&self, key: u8) -> bool {
         if key > 0xF {
             // TODO raise error instead of no-op if out-of-bounds?
@@ -365,10 +381,12 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub(crate) fn await_key(&mut self, post_reg: Register) {
         self.awaiting_key = Some(post_reg);
     }
 
+    #[inline]
     pub fn press_key(&mut self, key: u8) {
         if key > 0xF {
             // TODO raise error instead of no-op if out-of-bounds?
@@ -377,6 +395,7 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn release_key(&mut self, key: u8) {
         if key > 0xF {
             // TODO raise error instead of no-op if out-of-bounds?
@@ -398,6 +417,7 @@ impl CPU {
         Ok(())
     }
 
+    #[inline]
     pub fn disassemble(&self, idx: u16) -> Option<&str> {
         let word = self.read_memory_word(idx);
         if let Ok(word) = word {
@@ -407,13 +427,9 @@ impl CPU {
         }
     }
 
+    #[inline]
     pub fn disassemble_next(&self) -> Option<&str> {
-        let word = self.read_memory_word(self.pc);
-        if let Ok(word) = word {
-            Instruction::lookup(word).map(|inst| inst.disassembly)
-        } else {
-            None
-        }
+        self.disassemble(self.pc)
     }
 
     pub fn save_state(&mut self) -> Result<SavedState, Error> {
@@ -470,10 +486,12 @@ impl CPU {
         self.random_state.reseed(state.seed);
     }
 
+    #[inline]
     pub fn random(&mut self) -> u8 {
         self.random_state.generate()
     }
 
+    #[inline]
     pub fn reseed(&mut self, seed: u64) {
         self.random_state = WyRand::new_seed(seed);
     }
