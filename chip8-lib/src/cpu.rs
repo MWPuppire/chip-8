@@ -89,8 +89,8 @@ cfg_if::cfg_if! {
                 }
             }
         }
-        #[inline]
         impl Default for CallStack {
+            #[inline]
             fn default() -> Self {
                 Self::new()
             }
@@ -207,14 +207,16 @@ impl CPU {
         if let Some(inst) = inst {
             let cycles = inst.cycles;
             self.pc += 2;
-            if let Some(op) = match self.mode {
+            let op: Option<crate::instruction::OpcodeExecute> = match self.mode {
                 #[cfg(feature = "cosmac")]
                 Chip8Mode::Cosmac => inst.cosmac,
                 #[cfg(feature = "super-chip")]
                 Chip8Mode::SuperChip => inst.schip,
                 #[cfg(feature = "xo-chip")]
                 Chip8Mode::XoChip => inst.xochip,
-            } {
+            };
+            #[cfg_attr(not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")), allow(unreachable_code))]
+            if let Some(op) = op {
                 let extra_cycles = op(self, opcode);
                 Ok(cycles + extra_cycles)
             } else {

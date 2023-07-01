@@ -97,6 +97,7 @@ impl fmt::Display for Chip8Mode {
     }
 }
 
+#[cfg(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip"))]
 impl Default for Chip8Mode {
     #[inline]
     fn default() -> Self {

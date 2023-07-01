@@ -1,3 +1,7 @@
+// The imports are all flagged unused if no CHIP-8 feature is enabled; in the
+// interest of keeping a more useful error message, that warning is disabled.
+#![cfg_attr(not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")), allow(unused_imports))]
+
 use crate::CPU;
 
 mod arithmetic;
@@ -19,7 +23,7 @@ use misc::*;
 mod timers;
 use timers::*;
 
-type OpcodeExecute = fn(&mut CPU, u16) -> u32;
+pub(crate) type OpcodeExecute = fn(&mut CPU, u16) -> u32;
 
 pub(crate) struct Instruction {
     #[cfg(feature = "cosmac")]

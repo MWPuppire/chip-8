@@ -12,7 +12,7 @@ extern crate serde_big_array;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub mod common;
+mod common;
 pub mod cpu;
 pub mod display;
 mod font;
