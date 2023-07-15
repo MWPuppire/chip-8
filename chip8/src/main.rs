@@ -1,7 +1,11 @@
 extern crate cfg_if;
 extern crate chip8_lib;
 extern crate instant;
+extern crate rfd;
 extern crate softbuffer;
+extern crate tokio;
+#[macro_use]
+extern crate tracing;
 extern crate winit;
 
 cfg_if::cfg_if! {
@@ -10,9 +14,11 @@ cfg_if::cfg_if! {
         extern crate web_sys;
         extern crate js_sys;
         extern crate console_error_panic_hook;
+        extern crate tracing_wasm;
         mod web_frontend;
         use web_frontend as frontend;
     } else {
+        extern crate tracing_subscriber;
         mod desktop_frontend;
         use desktop_frontend as frontend;
     }
@@ -20,7 +26,6 @@ cfg_if::cfg_if! {
 
 pub mod debug_window;
 pub mod emulator;
-pub mod log;
 
 use softbuffer::GraphicsContext;
 use winit::event::{Event, WindowEvent};
@@ -32,10 +37,17 @@ use chip8_lib::Error;
 
 pub const SCALE_FACTOR: usize = 8;
 
-fn main() {
+#[cfg_attr(target_arch = "wasm32", tokio::main(flavor = "current_thread"))]
+#[cfg_attr(not(target_arch = "wasm32"), tokio::main)]
+async fn main() -> Result<(), Error> {
+    // TODO once debug window is further along, `Tee` the logs to the debug
+    // window in addition to their normal output
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
-            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+            console_error_panic_hook::set_once();
+            tracing_wasm::set_as_global_default();
+        } else {
+            tracing_subscriber::fmt::init();
         }
     }
 
@@ -44,7 +56,8 @@ fn main() {
     let mut graphics_context = unsafe { GraphicsContext::new(&window, &window) }.unwrap();
     let mut running = true;
     let mut debug = DebugWindow::new();
-    let mut emu = frontend::load_rom_file().unwrap();
+    let mut emu = Emulator::new();
+    frontend::load_rom_file(&mut emu).await?;
 
     event_loop.run(move |event, target, control_flow| {
         match event {
@@ -53,7 +66,7 @@ fn main() {
                     let res = emu.update();
                     match res {
                         Err(Error::NoRomLoaded) => {
-                            log!("No rom loaded");
+                            error!("No rom loaded");
                             if debug.is_open() {
                                 running = false;
                             } else {
@@ -62,11 +75,11 @@ fn main() {
                         }
                         Err(Error::Breakpoint(_)) => {
                             debug.open(target);
-                            debug.put_text("Breakpoint reached");
+                            info!("Breakpoint reached");
                             running = false;
                         }
                         Err(Error::UnknownOpcode(op)) => {
-                            log!("Unknown opcode 0x{:04x}", op);
+                            error!("Unknown opcode 0x{:04x}", op);
                             *control_flow = ControlFlow::Exit;
                         }
                         _ => {}

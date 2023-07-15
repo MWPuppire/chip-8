@@ -49,9 +49,6 @@ impl DebugWindow {
             _ => {}
         }
     }
-    pub fn put_text(&mut self, _: &str) {
-        // TO-DO
-    }
 
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
@@ -75,6 +72,14 @@ impl DebugWindow {
             fn remove_canvas(_: Window) {
                 unimplemented!();
             }
+        }
+    }
+}
+
+impl Drop for DebugWindow {
+    fn drop(&mut self) {
+        if let Some(win) = self.window.take() {
+            Self::remove_canvas(win);
         }
     }
 }

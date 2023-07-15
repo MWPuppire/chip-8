@@ -1,10 +1,7 @@
-use crate::log;
-use crate::Emulator;
-use crate::SCALE_FACTOR;
+use crate::{Emulator, SCALE_FACTOR};
 use chip8_lib::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use chip8_lib::Error;
-use std::env;
-use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use winit::dpi::LogicalSize;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::window::{Window, WindowBuilder};
@@ -20,14 +17,21 @@ pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
         .unwrap()
 }
 
-pub fn load_rom_file() -> Result<Emulator, Error> {
-    let mut emu = Emulator::new();
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        log!("No ROM file provided");
-        return Err(Error::NoRomLoaded);
+pub async fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
+    static USED_ARG_ROM: AtomicBool = AtomicBool::new(false);
+    if USED_ARG_ROM.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_ok() {
+        // skip program name
+        let mut args = std::env::args().skip(1);
+        if let Some(path) = args.next() {
+            info!("Using ROM file in argv for first initialization");
+            return emu.load_rom_file(path);
+        }
     }
-    let rom_path = Path::new(&args[1]);
-    emu.load_rom_file(rom_path)?;
-    Ok(emu)
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("CHIP-8 ROM", &["ch8"])
+        .pick_file()
+        .await
+        .ok_or(Error::NoRomLoaded)?;
+    let contents = file.read().await;
+    emu.load_rom(&contents)
 }

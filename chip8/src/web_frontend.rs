@@ -1,10 +1,6 @@
-use crate::log;
-use crate::Emulator;
-use crate::SCALE_FACTOR;
+use crate::{Emulator, SCALE_FACTOR};
 use chip8_lib::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use chip8_lib::Error;
-use futures::channel::oneshot;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use winit::dpi::LogicalSize;
@@ -34,7 +30,17 @@ pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
         .unwrap()
 }
 
-pub fn load_rom_file() -> Result<Emulator, Error> {
+pub async fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
+    // TODO can't open a file dialog without user interaction,
+    // so delay this until a button is pressed (return a JsPromise?)
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("CHIP-8 ROM", &["ch8"])
+        .pick_file()
+        .await
+        .ok_or(Error::NoRomLoaded)?;
+    let contents = file.read().await;
+    emu.load_rom(&contents)
+/*
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let rom_input = document
@@ -56,7 +62,7 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
     });
 
     let err_cb = Closure::wrap(Box::new(move |err| {
-        log!("{:?}", err);
+        error!("{:?}", err);
     }) as Box<dyn FnMut(JsValue)>);
 
     let rom_captured = rom_input.clone();
@@ -77,4 +83,5 @@ pub fn load_rom_file() -> Result<Emulator, Error> {
         .remove_event_listener_with_callback("change", input_callback.as_ref().unchecked_ref())
         .unwrap();
     Ok(out.unwrap().unwrap())
+*/
 }

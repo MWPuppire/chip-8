@@ -1,4 +1,3 @@
-use crate::log;
 use chip8_lib::{Chip8Mode, Error, CPU};
 
 use std::fs;
@@ -40,13 +39,13 @@ impl Emulator {
         self.cpu.emulate_breakpoints(dt, &self.breakpoints[..])?;
         if self.cpu.should_beep() {
             // TO-DO actually beep
-            log!("beep!");
+            info!("beep!");
         }
         Ok(())
     }
 
-    pub fn load_rom_file(&mut self, file: &Path) -> Result<(), Error> {
-        let contents = fs::read(file);
+    pub fn load_rom_file(&mut self, file: impl AsRef<Path>) -> Result<(), Error> {
+        let contents = fs::read(file.as_ref());
         if let Ok(contents) = contents {
             self.cpu.load_rom(&contents[..])?;
             self.has_rom = true;
