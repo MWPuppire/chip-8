@@ -414,7 +414,15 @@ impl CPU {
         if buf.len() > 0xE00 {
             return Err(Error::InvalidFile);
         }
-        self.clear_memory();
+        let _ = std::mem::replace(self, Self::new(self.mode));
+        self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);
+        Ok(())
+    }
+
+    pub fn hotswap(&mut self, buf: &[u8]) -> Result<(), Error> {
+        if buf.len() > 0xE00 {
+            return Err(Error::InvalidFile);
+        }
         self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);
         Ok(())
     }
