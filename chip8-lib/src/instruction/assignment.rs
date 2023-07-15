@@ -12,6 +12,14 @@ pub(super) fn inst_set_index(cpu: &mut CPU, inst: u16) -> u32 {
     0
 }
 
+#[cfg(feature = "xo-chip")]
+pub(super) fn inst_set_long_index(cpu: &mut CPU, _: u16) -> u32 {
+    // Currently, PC is bumped before calling the instruction.
+    cpu.index = cpu.read_memory_word(cpu.pc).unwrap();
+    cpu.pc += 2;
+    0
+}
+
 #[cfg(any(feature = "cosmac", feature = "xo-chip"))]
 pub(super) fn inst_reg_dump(cpu: &mut CPU, inst: u16) -> u32 {
     let max = (((inst >> 8) & 0xF) + 1) as u8;

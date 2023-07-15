@@ -300,7 +300,7 @@ impl Instruction {
             (0xF, 0x0, 0x0, 0x0) => make_instruction!(
                 None,
                 None,
-                Some(inst_todo),
+                Some(inst_set_long_index),
                 1,
                 "I = read_and_skip_next_word();",
             ),
@@ -308,7 +308,13 @@ impl Instruction {
                 make_instruction!(None, None, Some(inst_todo), 1, "set_drawing_plane(N);",)
             }
             (0xF, _, 0x0, 0x2) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "load_audio_pattern(I);",)
+                make_instruction!(
+                    None,
+                    None,
+                    Some(inst_set_audio_buffer),
+                    1,
+                    "load_audio_pattern(I);",
+                )
             }
             (0xF, _, 0x0, 0x7) => make_instruction!(
                 Some(inst_get_delay),
@@ -367,7 +373,13 @@ impl Instruction {
                 "set_bcd(I, Vx);",
             ),
             (0xF, _, 0x3, 0xA) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "set_audio_hertz(Vx);",)
+                make_instruction!(
+                    None,
+                    None,
+                    Some(inst_set_audio_pitch),
+                    1,
+                    "set_audio_hertz(Vx);",
+                )
             }
             (0xF, _, 0x5, 0x5) => make_instruction!(
                 Some(inst_reg_dump),

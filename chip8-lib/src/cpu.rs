@@ -1,3 +1,4 @@
+use crate::audio::Audio;
 use crate::display::Display;
 use crate::font;
 use crate::instruction::Instruction;
@@ -16,7 +17,10 @@ use serde_big_array::BigArray;
 const TIMER_SPEED: f64 = 60.0;
 const CLOCK_SPEED: f64 = 500.0;
 
+#[cfg(not(feature = "xo-chip"))]
 pub const CHIP8_MEM_SIZE: usize = 0x1000;
+#[cfg(feature = "xo-chip")]
+pub const CHIP8_MEM_SIZE: usize = 0x10000;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "alloc")] {
@@ -122,6 +126,7 @@ pub struct CPU {
     pub call_stack: CallStack,
     pub delay_timer: u8,
     pub sound_timer: u8,
+    pub audio: Audio,
 
     input: [bool; 16],
     awaiting_key: Option<Register>,
@@ -170,6 +175,7 @@ impl CPU {
             call_stack: CallStack::new(),
             delay_timer: 0,
             sound_timer: 0,
+            audio: Audio::new(),
 
             input: [false; 16],
             awaiting_key: None,
@@ -321,8 +327,22 @@ impl CPU {
     }
 
     #[inline]
-    pub fn should_beep(&self) -> bool {
-        self.sound_timer > 0
+    pub fn read_beep_samples_to(&mut self, dur: Duration, buf: &mut [f32]) -> usize {
+        if self.sound_timer > 0 {
+            self.audio.read_samples_to(dur, buf)
+        } else {
+            0
+        }
+    }
+
+    #[cfg(feature = "std")]
+    #[inline]
+    pub fn get_beep_samples(&mut self, dur: Duration) -> Option<Vec<f32>> {
+        if self.sound_timer > 0 {
+            Some(self.audio.get_samples(dur))
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -341,41 +361,45 @@ impl CPU {
 
     #[inline]
     pub fn read_memory_byte(&self, pos: u16) -> Result<u8, Error> {
-        if pos > 0xFFF {
+        let pos = pos as usize;
+        if pos >= CHIP8_MEM_SIZE {
             Err(Error::OutOfBounds)
         } else {
-            Ok(self.memory[pos as usize])
+            Ok(self.memory[pos])
         }
     }
 
     #[inline]
     pub fn read_memory_word(&self, pos: u16) -> Result<u16, Error> {
-        if pos >= 0xFFF {
+        let pos = pos as usize;
+        if pos >= (CHIP8_MEM_SIZE - 1) {
             Err(Error::OutOfBounds)
         } else {
-            let byte1 = self.memory[pos as usize];
-            let byte2 = self.memory[(pos + 1) as usize];
+            let byte1 = self.memory[pos];
+            let byte2 = self.memory[pos + 1];
             Ok((byte1 as u16) << 8 | (byte2 as u16))
         }
     }
 
     #[inline]
     pub fn write_memory_byte(&mut self, pos: u16, byte: u8) -> Result<(), Error> {
-        if pos > 0xFFF {
+        let pos = pos as usize;
+        if pos >= CHIP8_MEM_SIZE {
             Err(Error::OutOfBounds)
         } else {
-            self.memory[pos as usize] = byte;
+            self.memory[pos] = byte;
             Ok(())
         }
     }
 
     #[inline]
     pub fn write_memory_word(&mut self, pos: u16, word: u16) -> Result<(), Error> {
-        if pos >= 0xFFF {
+        let pos = pos as usize;
+        if pos >= (CHIP8_MEM_SIZE - 1) {
             Err(Error::OutOfBounds)
         } else {
-            self.memory[pos as usize] = (word >> 8) as u8;
-            self.memory[(pos + 1) as usize] = (word & 0xFF) as u8;
+            self.memory[pos] = (word >> 8) as u8;
+            self.memory[pos + 1] = (word & 0xFF) as u8;
             Ok(())
         }
     }
@@ -418,16 +442,23 @@ impl CPU {
     }
 
     pub fn load_rom(&mut self, buf: &[u8]) -> Result<(), Error> {
-        if buf.len() > 0xE00 {
+        if buf.len() > (CHIP8_MEM_SIZE - 0x200) {
             return Err(Error::InvalidFile);
         }
-        let _ = std::mem::replace(self, Self::new(self.mode));
+        #[cfg(feature = "xo-chip")]
+        if buf.len() > 0x1000 && self.mode != Chip8Mode::XoChip {
+            info!("Attempted to load a large ROM outside XO-CHIP mode; switching modes");
+            let _ = core::mem::replace(self, Self::new(Chip8Mode::XoChip));
+            self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);
+            return Ok(());
+        }
+        let _ = core::mem::replace(self, Self::new(self.mode));
         self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);
         Ok(())
     }
 
     pub fn hotswap(&mut self, buf: &[u8]) -> Result<(), Error> {
-        if buf.len() > 0xE00 {
+        if buf.len() > (CHIP8_MEM_SIZE - 0x200) {
             return Err(Error::InvalidFile);
         }
         self.memory[0x200..(buf.len() + 0x200)].copy_from_slice(buf);

@@ -11,7 +11,10 @@ extern crate serde;
 extern crate serde_big_array;
 #[cfg(feature = "std")]
 extern crate std;
+#[macro_use]
+extern crate tracing;
 
+pub mod audio;
 mod common;
 pub mod cpu;
 pub mod display;

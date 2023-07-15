@@ -3,10 +3,12 @@ extern crate chip8_lib;
 extern crate instant;
 extern crate rfd;
 extern crate softbuffer;
-extern crate tokio;
 #[macro_use]
 extern crate tracing;
 extern crate winit;
+
+// TODO once debug window is further along, `Tee` the logs to the debug window
+// in addition to their normal output.
 
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -17,10 +19,22 @@ cfg_if::cfg_if! {
         extern crate tracing_wasm;
         mod web_frontend;
         use web_frontend as frontend;
+        use wasm_bindgen::prelude::*;
+
+        #[wasm_bindgen]
+        pub fn init_logging() {
+            tracing_wasm::set_as_global_default();
+            console_error_panic_hook::set_once();
+        }
     } else {
         extern crate tracing_subscriber;
+        extern crate tokio;
         mod desktop_frontend;
         use desktop_frontend as frontend;
+
+        pub fn init_logging() {
+            tracing_subscriber::fmt::init();
+        }
     }
 }
 
@@ -37,19 +51,10 @@ use chip8_lib::Error;
 
 pub const SCALE_FACTOR: usize = 8;
 
-#[cfg_attr(target_arch = "wasm32", tokio::main(flavor = "current_thread"))]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen(main))]
 #[cfg_attr(not(target_arch = "wasm32"), tokio::main)]
-async fn main() -> Result<(), Error> {
-    // TODO once debug window is further along, `Tee` the logs to the debug
-    // window in addition to their normal output
-    cfg_if::cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-            console_error_panic_hook::set_once();
-            tracing_wasm::set_as_global_default();
-        } else {
-            tracing_subscriber::fmt::init();
-        }
-    }
+async fn main() {
+    init_logging();
 
     let event_loop = EventLoop::new();
     let window = frontend::create_window(&event_loop);
@@ -57,7 +62,7 @@ async fn main() -> Result<(), Error> {
     let mut running = true;
     let mut debug = DebugWindow::new();
     let mut emu = Emulator::new();
-    frontend::load_rom_file(&mut emu).await?;
+    frontend::load_rom_file(&mut emu).await.unwrap();
 
     event_loop.run(move |event, target, control_flow| {
         match event {

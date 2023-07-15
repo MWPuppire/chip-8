@@ -12326,6 +12326,9 @@ CPU {
     },
     delay_timer: 0,
     sound_timer: 0,
+    audio: Audio {
+        next: 0,
+    },
     input: [
         false,
         false,

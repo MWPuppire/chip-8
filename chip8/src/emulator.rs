@@ -1,17 +1,19 @@
-use chip8_lib::{Chip8Mode, Error, CPU};
+use chip8_lib::{audio, Chip8Mode, Error, CPU};
 
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
 use instant::Instant;
+use rodio::buffer::SamplesBuffer;
+use rodio::{OutputStream, OutputStreamHandle};
 
-#[derive(Clone, Debug)]
 pub struct Emulator {
     cpu: CPU,
     has_rom: bool,
     breakpoints: Vec<u16>,
     last_time: Instant,
+    audio_output: (OutputStream, OutputStreamHandle),
 }
 
 impl Emulator {
@@ -21,6 +23,7 @@ impl Emulator {
             has_rom: false,
             breakpoints: vec![],
             last_time: Instant::now(),
+            audio_output: OutputStream::try_default().unwrap(),
         }
     }
 
@@ -37,9 +40,9 @@ impl Emulator {
         }
 
         self.cpu.emulate_breakpoints(dt, &self.breakpoints[..])?;
-        if self.cpu.should_beep() {
-            // TO-DO actually beep
-            info!("beep!");
+        if let Some(samples) = self.cpu.get_beep_samples(dt) {
+            let buf = SamplesBuffer::new(1, audio::SAMPLE_RATE, samples);
+            self.audio_output.1.play_raw(buf).unwrap();
         }
         Ok(())
     }
