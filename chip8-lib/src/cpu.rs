@@ -215,7 +215,14 @@ impl CPU {
                 #[cfg(feature = "xo-chip")]
                 Chip8Mode::XoChip => inst.xochip,
             };
-            #[cfg_attr(not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")), allow(unreachable_code))]
+            // Code will only be unreachable if none of the mode features are
+            // enabled; in the interest of having only the `compile_error!`
+            // saying that one of them needs to be enabled, disable this warning
+            // if none of them are enabled.
+            #[cfg_attr(
+                not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")),
+                allow(unreachable_code)
+            )]
             if let Some(op) = op {
                 let extra_cycles = op(self, opcode);
                 Ok(cycles + extra_cycles)

@@ -1,6 +1,9 @@
 // The imports are all flagged unused if no CHIP-8 feature is enabled; in the
 // interest of keeping a more useful error message, that warning is disabled.
-#![cfg_attr(not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")), allow(unused_imports))]
+#![cfg_attr(
+    not(any(feature = "cosmac", feature = "super-chip", feature = "xo-chip")),
+    allow(unused_imports)
+)]
 
 use crate::CPU;
 
@@ -99,7 +102,7 @@ impl Instruction {
                 make_instruction!(None, Some(inst_todo), Some(inst_todo), 1, "scroll_left();",)
             }
             (0x0, 0x0, 0xF, 0xD) => {
-                make_instruction!(None, Some(inst_todo), Some(inst_todo), 1, "exit();",)
+                make_instruction!(None, Some(inst_exit), Some(inst_exit), 1, "exit();",)
             }
             (0x0, 0x0, 0xF, 0xE) => make_instruction!(
                 None,
@@ -151,10 +154,22 @@ impl Instruction {
                 "if (Vx == Vy) goto next;",
             ),
             (0x5, _, _, 0x2) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "reg_dump(Vx, Vy, &I);",)
+                make_instruction!(
+                    None,
+                    None,
+                    Some(inst_reg_dump_xy),
+                    1,
+                    "reg_dump(Vx, Vy, &I);",
+                )
             }
             (0x5, _, _, 0x3) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "reg_load(Vx, Vy, &I);",)
+                make_instruction!(
+                    None,
+                    None,
+                    Some(inst_reg_load_xy),
+                    1,
+                    "reg_load(Vx, Vy, &I);",
+                )
             }
             (0x6, _, _, _) => make_instruction!(
                 Some(inst_set_register),

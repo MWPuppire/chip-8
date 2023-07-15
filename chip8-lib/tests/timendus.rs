@@ -18,8 +18,8 @@ fn insta_settings() -> insta::Settings {
 fn make_emu(rom: &[u8]) -> CPU {
     let mut emu = CPU::new(Chip8Mode::default());
     // Consistent snapshot results
-    emu.reseed(0x0);
     emu.load_rom(rom).unwrap();
+    emu.reseed(0x0);
     emu
 }
 

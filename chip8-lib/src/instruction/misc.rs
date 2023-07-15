@@ -20,3 +20,9 @@ pub(super) fn inst_random(cpu: &mut CPU, inst: u16) -> u32 {
 pub(super) fn inst_nop(_: &mut CPU, _: u16) -> u32 {
     0
 }
+
+#[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+pub(super) fn inst_exit(cpu: &mut CPU, _: u16) -> u32 {
+    cpu.exited = true;
+    0
+}

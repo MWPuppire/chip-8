@@ -69,3 +69,26 @@ pub(super) fn inst_sprite_addr_index(cpu: &mut CPU, inst: u16) -> u32 {
     cpu.index = crate::font::SPRITE_ADDR[value as usize];
     0
 }
+
+#[cfg(feature = "xo-chip")]
+pub(super) fn inst_reg_dump_xy(cpu: &mut CPU, inst: u16) -> u32 {
+    let min = (((inst >> 8) & 0xF) + 1) as u8;
+    let max = (((inst >> 4) & 0xF) + 1) as u8;
+    for i in min..max {
+        let reg = i.try_into().unwrap();
+        cpu.write_memory_byte(cpu.index + i as u16, cpu.registers[reg])
+            .unwrap();
+    }
+    0
+}
+
+#[cfg(feature = "xo-chip")]
+pub(super) fn inst_reg_load_xy(cpu: &mut CPU, inst: u16) -> u32 {
+    let min = (((inst >> 8) & 0xF) + 1) as u8;
+    let max = (((inst >> 4) & 0xF) + 1) as u8;
+    for i in min..max {
+        let reg = i.try_into().unwrap();
+        cpu.registers[reg] = cpu.read_memory_byte(cpu.index + i as u16).unwrap();
+    }
+    0
+}
