@@ -102,10 +102,10 @@ impl Audio {
         samples
     }
 
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     #[inline]
     pub(crate) fn get_samples(&mut self, dur: Duration) -> Vec<f32> {
-        let mut out = Vec::with_capacity((SAMPLE_RATE as u64 * (dur.as_secs() + 1)) as usize);
+        let mut out = alloc::vec![0.0; (SAMPLE_RATE as u64 * (dur.as_secs() + 1)) as usize];
         self.read_samples_to(dur, &mut out);
         out
     }

@@ -11,7 +11,7 @@ extern crate serde;
 extern crate serde_big_array;
 #[cfg(feature = "std")]
 extern crate std;
-#[macro_use]
+#[cfg_attr(feature = "xo-chip", macro_use)]
 extern crate tracing;
 
 pub mod audio;
