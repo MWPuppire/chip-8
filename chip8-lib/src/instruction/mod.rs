@@ -39,12 +39,6 @@ pub(crate) struct Instruction {
     pub(crate) disassembly: &'static str,
 }
 
-#[allow(dead_code)]
-fn inst_todo(_: &mut CPU, code: u16) -> u32 {
-    let op = Instruction::disassemble(code).unwrap();
-    todo!("{}", op);
-}
-
 macro_rules! make_instruction {
     ($cosmac:expr, $schip:expr, $xochip:expr, $cycles:literal, $disassembly:literal $(,)?) => {
         Some(Instruction {
@@ -429,8 +423,5 @@ impl Instruction {
             ),
             _ => None,
         }
-    }
-    pub(crate) fn disassemble(opcode: u16) -> Option<&'static str> {
-        Self::lookup(opcode).map(|x| x.disassembly)
     }
 }
