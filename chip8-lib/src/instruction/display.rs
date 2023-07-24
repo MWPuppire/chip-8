@@ -88,5 +88,27 @@ cfg_if::cfg_if! {
             cpu.screen.high_res = true;
             0
         }
+
+        pub(super) fn inst_scroll_down(cpu: &mut CPU, inst: u16) -> u32 {
+            let n = (inst & 0xF) as i8;
+            cpu.screen.scroll(0, -if cpu.screen.high_res { n } else { n / 2 });
+            0
+        }
+        pub(super) fn inst_scroll_right(cpu: &mut CPU, _: u16) -> u32 {
+            cpu.screen.scroll(0, if cpu.screen.high_res { 4 } else { 2 });
+            0
+        }
+        pub(super) fn inst_scroll_left(cpu: &mut CPU, _: u16) -> u32 {
+            cpu.screen.scroll(0, if cpu.screen.high_res { -4 } else { -2 });
+            0
+        }
     }
+}
+
+#[cfg(feature = "xo-chip")]
+pub(super) fn inst_scroll_up(cpu: &mut CPU, inst: u16) -> u32 {
+    let n = (inst & 0xF) as i8;
+    cpu.screen
+        .scroll(0, if cpu.screen.high_res { n } else { n / 2 });
+    0
 }

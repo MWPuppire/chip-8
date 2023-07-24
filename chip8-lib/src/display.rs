@@ -126,6 +126,58 @@ impl Display {
         }
         out
     }
+
+    // TODO test that scrolling functions properly; this feels sorta hacked
+    // together
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    pub fn scroll(&mut self, scroll_x: i8, scroll_y: i8) {
+        let x_neg = scroll_x < 0;
+        let y_neg = scroll_y < 0;
+        let scroll_x = scroll_x.abs() as usize % SCREEN_WIDTH;
+        let scroll_y = scroll_y.abs() as usize % SCREEN_HEIGHT;
+        if scroll_x != 0 {
+            for i in 0..SCREEN_HEIGHT {
+                let row_start = i * SCREEN_WIDTH;
+                if x_neg {
+                    self.buffer.copy_within(
+                        (row_start - scroll_x)..(row_start + SCREEN_WIDTH),
+                        row_start,
+                    );
+                    self.buffer[(row_start + SCREEN_WIDTH - scroll_x)..(row_start + SCREEN_WIDTH)]
+                        .fill(false);
+                } else {
+                    self.buffer.copy_within(
+                        row_start..(row_start + SCREEN_WIDTH - scroll_x),
+                        row_start + scroll_x,
+                    );
+                    self.buffer[row_start..(row_start + scroll_x)].fill(false);
+                }
+            }
+        }
+        if scroll_y != 0 {
+            for i in 0..SCREEN_WIDTH {
+                if y_neg {
+                    for j in (SCREEN_HEIGHT - 1)..=0 {
+                        self.buffer[j * SCREEN_WIDTH + i] = self
+                            .buffer
+                            .get(
+                                j.checked_sub(scroll_y).unwrap_or(SCREEN_HEIGHT) * SCREEN_WIDTH + i,
+                            )
+                            .copied()
+                            .unwrap_or(false);
+                    }
+                } else {
+                    for j in 0..SCREEN_HEIGHT {
+                        self.buffer[j * SCREEN_WIDTH + i] = self
+                            .buffer
+                            .get((j + scroll_y) * SCREEN_WIDTH + i)
+                            .copied()
+                            .unwrap_or(false);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Default for Display {

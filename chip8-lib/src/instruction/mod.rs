@@ -76,10 +76,16 @@ impl Instruction {
                 "(void) 0;",
             ),
             (0x0, 0x0, 0xC, _) => {
-                make_instruction!(None, Some(inst_todo), Some(inst_todo), 1, "scroll_down(N);",)
+                make_instruction!(
+                    None,
+                    Some(inst_scroll_down),
+                    Some(inst_scroll_down),
+                    1,
+                    "scroll_down(N);",
+                )
             }
             (0x0, 0x0, 0xD, _) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "scroll_up(N);",)
+                make_instruction!(None, None, Some(inst_scroll_up), 1, "scroll_up(N);",)
             }
             (0x0, 0x0, 0xE, 0x0) => make_instruction!(
                 Some(inst_clear),
@@ -96,10 +102,22 @@ impl Instruction {
                 "return;",
             ),
             (0x0, 0x0, 0xF, 0xB) => {
-                make_instruction!(None, Some(inst_todo), Some(inst_todo), 1, "scroll_right();",)
+                make_instruction!(
+                    None,
+                    Some(inst_scroll_right),
+                    Some(inst_scroll_right),
+                    1,
+                    "scroll_right();",
+                )
             }
             (0x0, 0x0, 0xF, 0xC) => {
-                make_instruction!(None, Some(inst_todo), Some(inst_todo), 1, "scroll_left();",)
+                make_instruction!(
+                    None,
+                    Some(inst_scroll_left),
+                    Some(inst_scroll_left),
+                    1,
+                    "scroll_left();",
+                )
             }
             (0x0, 0x0, 0xF, 0xD) => {
                 make_instruction!(None, Some(inst_exit), Some(inst_exit), 1, "exit();",)
@@ -360,8 +378,8 @@ impl Instruction {
             ),
             (0xF, _, 0x3, 0x0) => make_instruction!(
                 None,
-                Some(inst_todo),
-                Some(inst_todo),
+                Some(inst_big_sprite_addr_index),
+                Some(inst_big_sprite_addr_index),
                 1,
                 "I = digit_addr[Vx];",
             ),
@@ -397,15 +415,15 @@ impl Instruction {
             ),
             (0xF, _, 0x7, 0x5) => make_instruction!(
                 None,
-                Some(inst_todo),
-                Some(inst_todo),
+                Some(inst_persist_dump),
+                Some(inst_persist_dump),
                 1,
                 "persist_dump(Vx);",
             ),
             (0xF, _, 0x8, 0x5) => make_instruction!(
                 None,
-                Some(inst_todo),
-                Some(inst_todo),
+                Some(inst_persist_load),
+                Some(inst_persist_load),
                 1,
                 "persist_load(Vx);",
             ),

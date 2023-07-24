@@ -193,10 +193,18 @@ impl CPU {
         cpu
     }
 
+    #[cfg(not(any(feature = "super-chip", feature = "xo-chip")))]
     #[inline]
     fn clear_memory(&mut self) {
         self.memory.fill(0);
         self.memory[0x50..0xA0].copy_from_slice(&font::FONT_SET);
+    }
+    #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+    #[inline]
+    fn clear_memory(&mut self) {
+        self.memory.fill(0);
+        self.memory[0x50..0xA0].copy_from_slice(&font::FONT_SET);
+        self.memory[0xA0..0x140].copy_from_slice(&font::BIG_FONT_SET);
     }
 
     pub fn step(&mut self) -> Result<u32, Error> {

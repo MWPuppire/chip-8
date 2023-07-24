@@ -100,3 +100,31 @@ pub(super) fn inst_reg_load_xy(cpu: &mut CPU, inst: u16) -> u32 {
     }
     0
 }
+
+#[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+pub(super) fn inst_persist_dump(cpu: &mut CPU, inst: u16) -> u32 {
+    let max = (((inst >> 8) & 0xF) + 1) as u8;
+    for i in 0..max {
+        let reg = i.try_into().unwrap();
+        cpu.persistent_registers[reg] = cpu.registers[reg];
+    }
+    0
+}
+
+#[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+pub(super) fn inst_persist_load(cpu: &mut CPU, inst: u16) -> u32 {
+    let max = (((inst >> 8) & 0xF) + 1) as u8;
+    for i in 0..max {
+        let reg = i.try_into().unwrap();
+        cpu.registers[reg] = cpu.persistent_registers[reg];
+    }
+    0
+}
+
+#[cfg(any(feature = "super-chip", feature = "xo-chip"))]
+pub(super) fn inst_big_sprite_addr_index(cpu: &mut CPU, inst: u16) -> u32 {
+    let reg = (((inst >> 8) & 0xF) as u8).try_into().unwrap();
+    let value = cpu.registers[reg] & 0xF;
+    cpu.index = crate::font::BIG_SPRITE_ADDR[value as usize];
+    0
+}
