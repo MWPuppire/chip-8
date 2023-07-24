@@ -92,7 +92,7 @@ impl Audio {
 
         let mut next = self.next;
         let freq = 4000.0 * 2.0f32.powf((pitch - PITCH_BIAS) / 48.0);
-        let samples = (SAMPLE_RATE as u64 * (dur.as_secs() + 1)) as usize;
+        let samples = (SAMPLE_RATE as f64 * dur.as_secs_f64()) as usize;
         assert!(buf.len() >= samples);
         for i in 0..samples {
             buf[i] = pattern[next] * freq / SAMPLE_RATE as f32;
@@ -105,7 +105,7 @@ impl Audio {
     #[cfg(feature = "alloc")]
     #[inline]
     pub(crate) fn get_samples(&mut self, dur: Duration) -> Vec<f32> {
-        let mut out = alloc::vec![0.0; (SAMPLE_RATE as u64 * (dur.as_secs() + 1)) as usize];
+        let mut out = alloc::vec![0.0; (SAMPLE_RATE as f64 * dur.as_secs_f64()) as usize];
         self.read_samples_to(dur, &mut out);
         out
     }
