@@ -94,8 +94,8 @@ impl Audio {
         let freq = 4000.0 * 2.0f32.powf((pitch - PITCH_BIAS) / 48.0);
         let samples = (SAMPLE_RATE as f64 * dur.as_secs_f64()) as usize;
         assert!(buf.len() >= samples);
-        for i in 0..samples {
-            buf[i] = pattern[next] * freq / SAMPLE_RATE as f32;
+        for sample in buf.iter_mut().take(samples) {
+            *sample = pattern[next] * freq / SAMPLE_RATE as f32;
             next = (next + 1) % CHIP8_AUDIO_BUFFER_SIZE;
         }
         self.next = next;

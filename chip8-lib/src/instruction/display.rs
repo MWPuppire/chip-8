@@ -112,3 +112,9 @@ pub(super) fn inst_scroll_up(cpu: &mut CPU, inst: u16) -> u32 {
         .scroll(0, if cpu.screen.high_res { n } else { n / 2 });
     0
 }
+
+#[cfg(feature = "xo-chip")]
+pub(super) fn inst_set_bitplane(cpu: &mut CPU, inst: u16) -> u32 {
+    cpu.screen.write_mask = ((inst >> 8) & 0x3) as u8;
+    0
+}

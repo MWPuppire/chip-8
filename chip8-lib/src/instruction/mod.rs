@@ -323,7 +323,7 @@ impl Instruction {
                 "I = read_and_skip_next_word();",
             ),
             (0xF, _, 0x0, 0x1) => {
-                make_instruction!(None, None, Some(inst_todo), 1, "set_drawing_plane(N);",)
+                make_instruction!(None, None, Some(inst_set_bitplane), 1, "set_drawing_plane(N);",)
             }
             (0xF, _, 0x0, 0x2) => {
                 make_instruction!(
