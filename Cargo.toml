@@ -1,7 +1,8 @@
 [workspace]
 members = [
-	"chip8-lib",
-	"chip8",
+	"chip8-core",
+	"desktop-chip8",
+	"web-chip8",
 ]
 resolver = "2"
 

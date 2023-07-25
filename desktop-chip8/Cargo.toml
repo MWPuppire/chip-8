@@ -1,0 +1,16 @@
+[package]
+name = "desktop-chip8"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chip8-core = { path = "../chip8-core", features = [ "cosmac", "super-chip", "xo-chip", "std" ] }
+softbuffer = "0.2"
+winit = "0.28"
+rfd = "0.11"
+tracing = "0.1"
+instant = "0.1"
+tracing-subscriber = "0.3"
+rodio = { version = "0.17", default-features = false }

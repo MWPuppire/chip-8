@@ -1,5 +1,5 @@
 [package]
-name = "chip8-lib"
+name = "chip8-core"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.61"

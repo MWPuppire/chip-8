@@ -1,4 +1,4 @@
-use chip8_lib::{audio, Chip8Mode, Error, CPU};
+use chip8_core::{audio, Chip8Mode, Error, CPU};
 
 use std::fs;
 use std::path::Path;

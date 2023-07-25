@@ -1,68 +1,73 @@
-extern crate cfg_if;
-extern crate chip8_lib;
+extern crate chip8_core;
 extern crate instant;
 extern crate rfd;
 extern crate softbuffer;
 #[macro_use]
 extern crate tracing;
 extern crate winit;
-
-// TODO once debug window is further along, `Tee` the logs to the debug window
-// in addition to their normal output.
-
-cfg_if::cfg_if! {
-    if #[cfg(target_arch = "wasm32")] {
-        extern crate wasm_bindgen;
-        extern crate web_sys;
-        extern crate js_sys;
-        extern crate console_error_panic_hook;
-        extern crate tracing_wasm;
-        mod web_frontend;
-        use web_frontend as frontend;
-        use wasm_bindgen::prelude::*;
-
-        #[wasm_bindgen]
-        pub fn init_logging() {
-            tracing_wasm::set_as_global_default();
-            console_error_panic_hook::set_once();
-        }
-    } else {
-        extern crate tracing_subscriber;
-        extern crate tokio;
-        mod desktop_frontend;
-        use desktop_frontend as frontend;
-
-        pub fn init_logging() {
-            tracing_subscriber::fmt::init();
-        }
-    }
-}
+extern crate tracing_subscriber;
 
 pub mod debug_window;
 pub mod emulator;
 
 use softbuffer::GraphicsContext;
+use std::sync::atomic::{AtomicBool, Ordering};
+use winit::dpi::LogicalSize;
 use winit::event::{Event, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
-
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
+use winit::window::{Window, WindowBuilder};
 use crate::debug_window::DebugWindow;
 use crate::emulator::Emulator;
-use chip8_lib::Error;
+use chip8_core::Error;
+use chip8_core::display::{SCREEN_WIDTH, SCREEN_HEIGHT};
 
 pub const SCALE_FACTOR: usize = 8;
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen(main))]
-#[cfg_attr(not(target_arch = "wasm32"), tokio::main)]
-async fn main() {
-    init_logging();
+pub fn create_window<T>(target: &EventLoopWindowTarget<T>) -> Window {
+    WindowBuilder::new()
+        .with_resizable(false)
+        .with_inner_size(LogicalSize::new(
+            (SCALE_FACTOR * SCREEN_WIDTH) as f64,
+            (SCALE_FACTOR * SCREEN_HEIGHT) as f64,
+        ))
+        .with_title("CHIP-8")
+        .build(target)
+        .unwrap()
+}
+
+pub fn load_rom_file(emu: &mut Emulator) -> Result<(), Error> {
+    static USED_ARG_ROM: AtomicBool = AtomicBool::new(false);
+    if USED_ARG_ROM
+        .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+        .is_ok()
+    {
+        // skip program name
+        let mut args = std::env::args().skip(1);
+        if let Some(path) = args.next() {
+            info!("Using ROM file in argv for first initialization");
+            return emu.load_rom_file(path);
+        }
+    }
+    let path = rfd::FileDialog::new()
+        .add_filter("CHIP-8 ROM", &["ch8"])
+        .pick_file()
+        .ok_or(Error::NoRomLoaded)?;
+    let contents = std::fs::read(path).unwrap();
+    emu.load_rom(&contents)
+}
+
+fn main() {
+    // TODO once debug window is further along, `Tee` the logs to the debug
+    // window in addition to their normal output.
+    tracing_subscriber::fmt::init();
 
     let event_loop = EventLoop::new();
-    let window = frontend::create_window(&event_loop);
+    let window = create_window(&event_loop);
     let mut graphics_context = unsafe { GraphicsContext::new(&window, &window) }.unwrap();
     let mut running = true;
     let mut debug = DebugWindow::new();
     let mut emu = Emulator::new();
-    frontend::load_rom_file(&mut emu).await.unwrap();
+    load_rom_file(&mut emu).unwrap();
 
     event_loop.run(move |event, target, control_flow| {
         match event {
@@ -95,8 +100,8 @@ async fn main() {
                 let buf = emu.display_buffer(full_scale);
                 graphics_context.set_buffer(
                     &buf,
-                    (chip8_lib::display::SCREEN_WIDTH * full_scale) as u16,
-                    (chip8_lib::display::SCREEN_HEIGHT * full_scale) as u16,
+                    (SCREEN_WIDTH * full_scale) as u16,
+                    (SCREEN_HEIGHT * full_scale) as u16,
                 );
             }
             Event::WindowEvent { event, window_id } => {
