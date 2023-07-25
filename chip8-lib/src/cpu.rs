@@ -241,7 +241,7 @@ impl CPU {
                 let extra_cycles = op(self, opcode);
                 Ok(cycles + extra_cycles)
             } else {
-                Err(Error::NotDefined(inst.disassembly))
+                Err(Error::NotDefined(inst.disassembly, self.mode))
             }
         } else {
             Err(Error::UnknownOpcode(opcode))

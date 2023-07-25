@@ -83,12 +83,8 @@ async fn main() {
                             info!("Breakpoint reached");
                             running = false;
                         }
-                        Err(Error::UnknownOpcode(op)) => {
-                            error!("Unknown opcode 0x{:04x}", op);
-                            *control_flow = ControlFlow::Exit;
-                        }
-                        Err(Error::NotDefined(op)) => {
-                            error!("`{}` isn't defined for {}", op, emu.cpu.mode);
+                        Err(e) => {
+                            error!("{}", e);
                             *control_flow = ControlFlow::Exit;
                         }
                         _ => {}

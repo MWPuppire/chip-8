@@ -10,7 +10,7 @@ pub enum Error {
     OutOfBounds,
     NoRomLoaded,
     Exited,
-    NotDefined(&'static str),
+    NotDefined(&'static str, Chip8Mode),
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -21,7 +21,7 @@ impl fmt::Display for Error {
             Self::OutOfBounds => write!(f, "attempted an out-of-bounds memory access"),
             Self::NoRomLoaded => write!(f, "no ROM is loaded to execute from"),
             Self::Exited => write!(f, "program has exited"),
-            Self::NotDefined(op) => write!(f, "instruction `{}` isn't defined for this mode", op),
+            Self::NotDefined(op, mode) => write!(f, "`{}` isn't defined for {}", op, mode),
         }
     }
 }
