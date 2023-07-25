@@ -87,6 +87,10 @@ async fn main() {
                             error!("Unknown opcode 0x{:04x}", op);
                             *control_flow = ControlFlow::Exit;
                         }
+                        Err(Error::NotDefined(op)) => {
+                            error!("`{}` isn't defined for {}", op, emu.cpu.mode);
+                            *control_flow = ControlFlow::Exit;
+                        }
                         _ => {}
                     }
                 }

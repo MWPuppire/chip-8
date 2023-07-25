@@ -95,11 +95,11 @@ cfg_if::cfg_if! {
             0
         }
         pub(super) fn inst_scroll_right(cpu: &mut CPU, _: u16) -> u32 {
-            cpu.screen.scroll(0, if cpu.screen.high_res { 4 } else { 2 });
+            cpu.screen.scroll(if cpu.screen.high_res { 4 } else { 2 }, 0);
             0
         }
         pub(super) fn inst_scroll_left(cpu: &mut CPU, _: u16) -> u32 {
-            cpu.screen.scroll(0, if cpu.screen.high_res { -4 } else { -2 });
+            cpu.screen.scroll(if cpu.screen.high_res { -4 } else { -2 }, 0);
             0
         }
     }

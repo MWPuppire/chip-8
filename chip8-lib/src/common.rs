@@ -21,7 +21,7 @@ impl fmt::Display for Error {
             Self::OutOfBounds => write!(f, "attempted an out-of-bounds memory access"),
             Self::NoRomLoaded => write!(f, "no ROM is loaded to execute from"),
             Self::Exited => write!(f, "program has exited"),
-            Self::NotDefined(op) => write!(f, "instruction {} isn't defined for this mode", op),
+            Self::NotDefined(op) => write!(f, "instruction `{}` isn't defined for this mode", op),
         }
     }
 }

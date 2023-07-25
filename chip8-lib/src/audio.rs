@@ -76,7 +76,7 @@ impl Audio {
     pub(crate) fn write_pattern(&mut self, pat: &[u8]) {
         assert!(pat.len() >= 16);
         for (idx, byte) in pat.iter().take(16).copied().enumerate() {
-            self.buffer[(idx * 8)..].copy_from_slice(&byte_expand(byte));
+            self.buffer[(idx * 8)..(idx * 8 + 8)].copy_from_slice(&byte_expand(byte));
         }
     }
 

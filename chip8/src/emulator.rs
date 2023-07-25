@@ -9,7 +9,7 @@ use rodio::buffer::SamplesBuffer;
 use rodio::{OutputStream, OutputStreamHandle};
 
 pub struct Emulator {
-    cpu: CPU,
+    pub(crate) cpu: CPU,
     has_rom: bool,
     breakpoints: Vec<u16>,
     last_time: Instant,
@@ -19,7 +19,7 @@ pub struct Emulator {
 impl Emulator {
     pub fn new() -> Emulator {
         Emulator {
-            cpu: CPU::new(Chip8Mode::Cosmac),
+            cpu: CPU::new(Chip8Mode::XoChip),
             has_rom: false,
             breakpoints: vec![],
             last_time: Instant::now(),
