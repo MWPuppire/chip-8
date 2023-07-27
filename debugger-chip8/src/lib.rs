@@ -195,7 +195,7 @@ pub struct Chip8Debugger {
 impl Chip8Debugger {
     fn backtrace(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         Ok(cpu.call_stack.iter().rfold(String::new(), |out, frame| {
-            out + &format!("0x{:0>4X}\n", frame)
+            out + &format!("0x{:0>4X}", frame)
         }))
     }
 
@@ -209,11 +209,11 @@ impl Chip8Debugger {
         if !args.is_empty() {
             let idx = parse_int::<u16>(args[0])?;
             cpu.disassemble(idx)
-                .ok_or(format!("Unknown instruction at {}\n", idx).into())
+                .ok_or(format!("Unknown instruction at {}", idx).into())
                 .map(Into::into)
         } else {
             cpu.disassemble_next()
-                .ok_or("Unknown instruction ahead\n".into())
+                .ok_or("Unknown instruction ahead".into())
                 .map(Into::into)
         }
     }
@@ -264,7 +264,7 @@ impl Chip8Debugger {
             }
             cycles += cpu.step()?;
         }
-        Ok(format!("Stepped {} cycles before returning\n", cycles))
+        Ok(format!("Stepped {} cycles before returning", cycles))
     }
 
     fn goto(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
@@ -276,20 +276,20 @@ impl Chip8Debugger {
     fn help(&mut self, _cpu: &mut CPU, args: &[&str]) -> CommandResult {
         if !args.is_empty() {
             if let Ok(cmd) = DebugCommand::from_str(args[0]) {
-                Ok(format!("{}\n", CMD_HELP_TEXT[cmd]))
+                Ok(format!("{}", CMD_HELP_TEXT[cmd]))
             } else {
-                Err(format!("Unknown command `{}`.\nFor help, use `help`.\n", args[0]).into())
+                Err(format!("Unknown command `{}`.\nFor help, use `help`.", args[0]).into())
             }
         } else {
             Ok(DebugCommand::iter()
-                .fold(String::new(), |out, help| out + CMD_HELP_TEXT[help] + "\n"))
+                .fold(String::new(), |out, help| out + CMD_HELP_TEXT[help] + ""))
         }
     }
 
     fn keys(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         Ok((0..16).fold(String::new(), |out, key| {
             if cpu.is_key_down(key) {
-                out + &format!("{:0>4X} key\n", key)
+                out + &format!("{:0>4X} key", key)
             } else {
                 out
             }
@@ -298,12 +298,12 @@ impl Chip8Debugger {
 
     fn listbrk(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         if self.breaks.is_empty() {
-            Ok("No breakpoints\n".into())
+            Ok("No breakpoints".into())
         } else {
             Ok(self
                 .breaks
                 .iter()
-                .fold(String::new(), |out, brk| out + &format!("0x{:0>4X}\n", brk)))
+                .fold(String::new(), |out, brk| out + &format!("0x{:0>4X}", brk)))
         }
     }
 
@@ -322,13 +322,13 @@ impl Chip8Debugger {
             self.paused = true;
             Ok("".into())
         } else {
-            Ok(format!("{}\n", cpu.mode))
+            Ok(format!("{}", cpu.mode))
         }
     }
 
     fn next(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         cpu.disassemble_next()
-            .ok_or("Unknown instruction ahead\n".into())
+            .ok_or("Unknown instruction ahead".into())
             .map(Into::into)
     }
 
@@ -363,10 +363,10 @@ impl Chip8Debugger {
     fn regs(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         let mut out = String::new();
         for (reg, &val) in cpu.registers.iter() {
-            out += &format!("{} = {}\n", reg, val);
+            out += &format!("{} = {}", reg, val);
         }
-        out += &format!("PC = {}\n", cpu.pc);
-        out += &format!("Address = {}\n", cpu.index);
+        out += &format!("PC = {}", cpu.pc);
+        out += &format!("Address = {}", cpu.index);
         Ok(out)
     }
 
@@ -375,7 +375,7 @@ impl Chip8Debugger {
         if self.breaks.remove(&brk) {
             Ok("".into())
         } else {
-            Err(format!("Breakpoint 0x{:0<4X} not set\n", brk).into())
+            Err(format!("Breakpoint 0x{:0<4X} not set", brk).into())
         }
     }
 
@@ -407,7 +407,7 @@ impl Chip8Debugger {
 
     fn timers(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
         Ok(format!(
-            "Delay timer: {}\nSound timer: {}\n",
+            "Delay timer: {}\nSound timer: {}",
             cpu.delay_timer, cpu.sound_timer
         ))
     }
@@ -443,16 +443,16 @@ impl Chip8Debugger {
                     (CMD_FUNCS[cmd])(self, cpu, &args)
                 } else if argc < *target_args.start() {
                     Err(format!(
-                        "Expected {} more arguments for `{}`.\nFor help, use `help`.\n",
+                        "Expected {} more arguments for `{}`.\nFor help, use `help`.",
                         *target_args.start() - argc,
                         cmd
                     )
                     .into())
                 } else {
-                    Err(format!("Too many arguments to `{}`; expected {}, received {}.\nFor help, use `help`.\n", cmd, *target_args.end(), argc).into())
+                    Err(format!("Too many arguments to `{}`; expected {}, received {}.\nFor help, use `help`.", cmd, *target_args.end(), argc).into())
                 }
             } else {
-                Err(format!("Unknown command `{}`.\nFor help, use `help`.\n", cmd).into())
+                Err(format!("Unknown command `{}`.\nFor help, use `help`.", cmd).into())
             }
         } else {
             return Ok("".into());
