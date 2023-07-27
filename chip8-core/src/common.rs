@@ -11,6 +11,7 @@ pub enum Error {
     NoRomLoaded,
     Exited,
     NotDefined(&'static str, Chip8Mode),
+    EarlyExitRequested,
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -22,6 +23,7 @@ impl fmt::Display for Error {
             Self::NoRomLoaded => write!(f, "no ROM is loaded to execute from"),
             Self::Exited => write!(f, "program has exited"),
             Self::NotDefined(op, mode) => write!(f, "`{}` isn't defined for {}", op, mode),
+            Self::EarlyExitRequested => write!(f, "emulator paused execution"),
         }
     }
 }
@@ -88,7 +90,7 @@ impl fmt::Display for Chip8Mode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             #[cfg(feature = "cosmac")]
-            Self::Cosmac => write!(f, "Cosmac CHIP-8"),
+            Self::Cosmac => write!(f, "Cosmac"),
             #[cfg(feature = "super-chip")]
             Self::SuperChip => write!(f, "Super-CHIP"),
             #[cfg(feature = "xo-chip")]
@@ -111,6 +113,46 @@ impl Default for Chip8Mode {
             } else if #[cfg(feature = "xo-chip")] {
                 Self::XoChip
             }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Chip8ModeParseError {
+    InvalidMode,
+    NotEnabled(&'static str),
+}
+impl fmt::Display for Chip8ModeParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::InvalidMode => write!(f, "unknown CHIP-8 mode"),
+            Self::NotEnabled(flag) => write!(f, "mode not enabled; recompile with feature flag {}", flag),
+        }
+    }
+}
+#[cfg(feature = "std")]
+impl std::error::Error for Chip8ModeParseError {}
+
+impl core::str::FromStr for Chip8Mode {
+    type Err = Chip8ModeParseError;
+    fn from_str(s: &str) -> Result<Self, Chip8ModeParseError> {
+        if s.eq_ignore_ascii_case("cosmac") {
+            #[cfg(feature = "cosmac")]
+            return Ok(Chip8Mode::Cosmac);
+            #[cfg(not(feature = "cosmac"))]
+            return Err(Chip8ModeParseError::NotEnabled("cosmac"));
+        } else if s.eq_ignore_ascii_case("super-chip") {
+            #[cfg(feature = "super-chip")]
+            return Ok(Chip8Mode::SuperChip);
+            #[cfg(not(feature = "super-chip"))]
+            return Err(Chip8ModeParseError::NotEnabled("super-chip"));
+        } else if s.eq_ignore_ascii_case("xo-chip") {
+            #[cfg(feature = "xo-chip")]
+            return Ok(Chip8Mode::XoChip);
+            #[cfg(not(feature = "xo-chip"))]
+            return Err(Chip8ModeParseError::NotEnabled("xo-chip"));
+        } else {
+            Err(Chip8ModeParseError::InvalidMode)
         }
     }
 }

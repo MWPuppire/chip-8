@@ -11,7 +11,7 @@ std = ["nanorand/std", "serde/std", "getrandom/std", "alloc"]
 cosmac = []
 super-chip = []
 xo-chip = []
-serde = ["enum-map/serde", "serde-big-array"]
+serde = ["enum-map/serde", "serde-big-array", "dep:serde"]
 getrandom-js = ["getrandom/js"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

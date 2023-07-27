@@ -28,7 +28,7 @@ use timers::*;
 
 pub(crate) type OpcodeExecute = fn(&mut CPU, u16) -> u32;
 
-#[derive(Copy, Clone, Debug)]
+// #[derive(Copy, Clone, Debug)]
 pub(crate) struct Instruction {
     #[cfg(feature = "cosmac")]
     pub(crate) cosmac: Option<OpcodeExecute>,

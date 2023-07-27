@@ -59,6 +59,14 @@ impl Register {
     }
 }
 
+impl core::str::FromStr for Register {
+    type Err = ();
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, ()> {
+        Self::by_name(s).ok_or(())
+    }
+}
+
 impl TryFrom<u8> for Register {
     type Error = RegisterOutOfRange;
     #[inline]

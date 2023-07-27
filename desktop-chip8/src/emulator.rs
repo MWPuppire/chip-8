@@ -39,7 +39,7 @@ impl Emulator {
             return Err(Error::NoRomLoaded);
         }
 
-        self.cpu.emulate_breakpoints(dt, &self.breakpoints[..])?;
+        self.cpu.emulate_for_until(dt, |cpu| self.breakpoints.contains(&cpu.pc))?;
         if let Some(samples) = self.cpu.get_beep_samples(dt) {
             let buf = SamplesBuffer::new(1, audio::SAMPLE_RATE, samples);
             self.audio_output.1.play_raw(buf).unwrap();

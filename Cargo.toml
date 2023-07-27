@@ -1,6 +1,7 @@
 [workspace]
 members = [
 	"chip8-core",
+	"debugger-chip8",
 	"desktop-chip8",
 	"web-chip8",
 ]

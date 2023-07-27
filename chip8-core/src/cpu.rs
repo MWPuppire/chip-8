@@ -46,6 +46,10 @@ cfg_if::cfg_if! {
             pub fn pop(&mut self) -> Option<u16> {
                 self.stack.pop()
             }
+            #[inline]
+            pub fn iter(&self) -> core::slice::Iter<u16> {
+                self.stack.iter()
+            }
         }
 
         impl<'a> IntoIterator for &'a CallStack {
@@ -91,6 +95,10 @@ cfg_if::cfg_if! {
                     self.call_stack_idx -= 1;
                     Some(self.call_stack[self.call_stack_idx])
                 }
+            }
+            #[inline]
+            pub fn iter(&self) -> core::slice::Iter<u16> {
+                self.call_stack[0..self.call_stack_idx].iter()
             }
         }
         impl Default for CallStack {
@@ -288,7 +296,7 @@ impl CPU {
         Ok(())
     }
 
-    pub fn emulate_breakpoints(&mut self, dur: Duration, breakpoints: &[u16]) -> Result<(), Error> {
+    pub fn emulate_for_until(&mut self, dur: Duration, halt: impl Fn(&CPU) -> bool) -> Result<(), Error> {
         #[cfg(any(feature = "super-chip", feature = "xo-chip"))]
         if self.exited {
             return Err(Error::Exited);
@@ -315,14 +323,11 @@ impl CPU {
         while self.cycles_pending > 0.0 {
             let cycles_taken = self.step()?;
             self.cycles_pending -= cycles_taken as f64;
-            for i in breakpoints {
-                if self.pc == *i {
-                    self.cycles_pending = 0.0;
-                    return Err(Error::Breakpoint(self.pc));
-                }
-            }
 
             // checks for early exit
+            if halt(self) {
+                return Err(Error::EarlyExitRequested);
+            }
             #[cfg(feature = "cosmac")]
             if self.vblank_wait {
                 return Ok(());
@@ -550,5 +555,12 @@ impl CPU {
     #[inline]
     pub fn reseed(&mut self, seed: u64) {
         self.random_state = WyRand::new_seed(seed);
+    }
+}
+
+impl Default for CPU {
+    #[inline]
+    fn default() -> Self {
+        CPU::new(Chip8Mode::default())
     }
 }
