@@ -17,15 +17,15 @@ use std::time::Duration;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
 fn parse_int<I: Unsigned>(src: &str) -> Result<I, Box<dyn std::error::Error>> {
-    if src.starts_with("-") {
+    if let Some(src) = src.strip_prefix('-') {
         let parsed = parse_int::<I>(src)?;
         if parsed >> (I::BITS - 1) == I::ONE {
             return Err(format!("Number too small to fit in {} bits", I::BITS).into());
         }
         return Ok(!parsed + I::ONE);
     }
-    if src.starts_with("#") {
-        Ok(I::from_str_radix(&src[1..], 16)?)
+    if let Some(src) = src.strip_prefix('#') {
+        Ok(I::from_str_radix(src, 16)?)
     } else if src.starts_with("0x") || src.starts_with("0X") {
         Ok(I::from_str_radix(&src[2..], 16)?)
     } else if src.starts_with("0b") || src.starts_with("0B") {
@@ -153,72 +153,88 @@ static CMD_HELP_TEXT: Lazy<EnumMap<DebugCommand, &'static str>> = Lazy::new(|| {
 });
 
 type CommandResult = Result<String, Box<dyn std::error::Error>>;
-type CommandBody = fn(&mut Chip8Debugger, &mut CPU, &[&str]) -> CommandResult;
+type CommandBody = fn(&mut Chip8Debugger, &[&str]) -> CommandResult;
 static CMD_FUNCS: Lazy<EnumMap<DebugCommand, CommandBody>> = Lazy::new(|| {
     enum_map! {
-        DebugCommand::Backtrace => Chip8Debugger::backtrace,
-        DebugCommand::Brk => Chip8Debugger::brk,
-        DebugCommand::Disassemble => Chip8Debugger::disassemble,
-        DebugCommand::DumpDisplay => Chip8Debugger::dump_display,
-        DebugCommand::DumpMemory => Chip8Debugger::dump_memory,
-        DebugCommand::Finish => Chip8Debugger::finish,
-        DebugCommand::Goto => Chip8Debugger::goto,
-        DebugCommand::Help => Chip8Debugger::help,
-        DebugCommand::Keys => Chip8Debugger::keys,
-        DebugCommand::ListBrk => Chip8Debugger::listbrk,
-        DebugCommand::LoadRom => Chip8Debugger::load_rom,
-        DebugCommand::Mode => Chip8Debugger::mode,
-        DebugCommand::Next => Chip8Debugger::next,
-        DebugCommand::Pause => Chip8Debugger::pause,
-        DebugCommand::Read => Chip8Debugger::read,
-        DebugCommand::Reboot => Chip8Debugger::reboot,
-        DebugCommand::RecvKey => Chip8Debugger::recvkey,
-        DebugCommand::Regs => Chip8Debugger::regs,
-        DebugCommand::RemBrk => Chip8Debugger::rembrk,
-        DebugCommand::Resume => Chip8Debugger::resume,
-        DebugCommand::SetAddr => Chip8Debugger::setaddr,
-        DebugCommand::SetReg => Chip8Debugger::setreg,
-        DebugCommand::Step => Chip8Debugger::step,
-        DebugCommand::Timers => Chip8Debugger::timers,
-        DebugCommand::ToggleKey => Chip8Debugger::toggle_key,
-        DebugCommand::Write => Chip8Debugger::write,
+        DebugCommand::Backtrace => Chip8Debugger::cmd_backtrace,
+        DebugCommand::Brk => Chip8Debugger::cmd_brk,
+        DebugCommand::Disassemble => Chip8Debugger::cmd_disassemble,
+        DebugCommand::DumpDisplay => Chip8Debugger::cmd_dump_display,
+        DebugCommand::DumpMemory => Chip8Debugger::cmd_dump_memory,
+        DebugCommand::Finish => Chip8Debugger::cmd_finish,
+        DebugCommand::Goto => Chip8Debugger::cmd_goto,
+        DebugCommand::Help => Chip8Debugger::cmd_help,
+        DebugCommand::Keys => Chip8Debugger::cmd_keys,
+        DebugCommand::ListBrk => Chip8Debugger::cmd_listbrk,
+        DebugCommand::LoadRom => Chip8Debugger::cmd_load_rom,
+        DebugCommand::Mode => Chip8Debugger::cmd_mode,
+        DebugCommand::Next => Chip8Debugger::cmd_next,
+        DebugCommand::Pause => Chip8Debugger::cmd_pause,
+        DebugCommand::Read => Chip8Debugger::cmd_read,
+        DebugCommand::Reboot => Chip8Debugger::cmd_reboot,
+        DebugCommand::RecvKey => Chip8Debugger::cmd_recvkey,
+        DebugCommand::Regs => Chip8Debugger::cmd_regs,
+        DebugCommand::RemBrk => Chip8Debugger::cmd_rembrk,
+        DebugCommand::Resume => Chip8Debugger::cmd_resume,
+        DebugCommand::SetAddr => Chip8Debugger::cmd_setaddr,
+        DebugCommand::SetReg => Chip8Debugger::cmd_setreg,
+        DebugCommand::Step => Chip8Debugger::cmd_step,
+        DebugCommand::Timers => Chip8Debugger::cmd_timers,
+        DebugCommand::ToggleKey => Chip8Debugger::cmd_toggle_key,
+        DebugCommand::Write => Chip8Debugger::cmd_write,
     }
 });
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Chip8Debugger {
+    cpu: CPU,
     breaks: BTreeSet<u16>,
     paused: bool,
     has_rom: bool,
 }
 
 impl Chip8Debugger {
-    fn backtrace(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
-        Ok(cpu.call_stack.iter().rfold(String::new(), |out, frame| {
-            out + &format!("0x{:0>4X}", frame)
-        }))
+    pub fn new(mode: Chip8Mode) -> Self {
+        Chip8Debugger {
+            cpu: CPU::new(mode),
+            breaks: BTreeSet::default(),
+            paused: true,
+            has_rom: false,
+        }
     }
 
-    fn brk(&mut self, _cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_backtrace(&mut self, _args: &[&str]) -> CommandResult {
+        Ok(self
+            .cpu
+            .call_stack
+            .iter()
+            .rfold(String::new(), |out, frame| {
+                out + &format!("0x{:0>4X}", frame)
+            }))
+    }
+
+    fn cmd_brk(&mut self, args: &[&str]) -> CommandResult {
         let brk = parse_int::<u16>(args[0])?;
         self.breaks.insert(brk);
         Ok("".into())
     }
 
-    fn disassemble(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_disassemble(&mut self, args: &[&str]) -> CommandResult {
         if !args.is_empty() {
             let idx = parse_int::<u16>(args[0])?;
-            cpu.disassemble(idx)
+            self.cpu
+                .disassemble(idx)
                 .ok_or(format!("Unknown instruction at {}", idx).into())
                 .map(Into::into)
         } else {
-            cpu.disassemble_next()
+            self.cpu
+                .disassemble_next()
                 .ok_or("Unknown instruction ahead".into())
                 .map(Into::into)
         }
     }
 
-    fn dump_display(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_dump_display(&mut self, args: &[&str]) -> CommandResult {
         let scale = if args.len() > 1 {
             parse_int::<u32>(args[1])?
         } else {
@@ -228,7 +244,8 @@ impl Chip8Debugger {
             scale * SCREEN_WIDTH as u32,
             scale * SCREEN_HEIGHT as u32,
             |x, y| {
-                let pix = cpu
+                let pix = self
+                    .cpu
                     .screen
                     .read_pixel_unchecked((x / scale) as u8, (y / scale) as u8);
                 let color = COLOR_SET[pix];
@@ -239,19 +256,19 @@ impl Chip8Debugger {
         Ok("".into())
     }
 
-    fn dump_memory(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
-        std::fs::write(args[0], cpu.memory)?;
+    fn cmd_dump_memory(&mut self, args: &[&str]) -> CommandResult {
+        std::fs::write(args[0], self.cpu.memory)?;
         Ok("".into())
     }
 
-    fn finish(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_finish(&mut self, _args: &[&str]) -> CommandResult {
         if !self.has_rom {
             return Err(Box::new(Error::NoRomLoaded));
         }
         let mut nested = 0;
         let mut cycles = 0;
         loop {
-            let next_inst = cpu.read_memory_word(cpu.pc)?;
+            let next_inst = self.cpu.read_memory_word(self.cpu.pc)?;
             // RET
             if next_inst == 0x00EE {
                 if nested == 0 {
@@ -262,18 +279,18 @@ impl Chip8Debugger {
             } else if (next_inst & 0xF000) == 0x2000 {
                 nested += 1;
             }
-            cycles += cpu.step()?;
+            cycles += self.cpu.step()?;
         }
         Ok(format!("Stepped {} cycles before returning", cycles))
     }
 
-    fn goto(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_goto(&mut self, args: &[&str]) -> CommandResult {
         let pos = parse_int::<u16>(args[0])?;
-        cpu.pc = pos;
+        self.cpu.pc = pos;
         Ok("".into())
     }
 
-    fn help(&mut self, _cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_help(&mut self, args: &[&str]) -> CommandResult {
         if !args.is_empty() {
             if let Ok(cmd) = DebugCommand::from_str(args[0]) {
                 Ok(format!("{}", CMD_HELP_TEXT[cmd]))
@@ -281,14 +298,16 @@ impl Chip8Debugger {
                 Err(format!("Unknown command `{}`.\nFor help, use `help`.", args[0]).into())
             }
         } else {
-            Ok(DebugCommand::iter()
-                .fold(String::new(), |out, help| out + CMD_HELP_TEXT[help] + ""))
+            Ok(
+                DebugCommand::iter()
+                    .fold(String::new(), |out, help| out + CMD_HELP_TEXT[help] + ""),
+            )
         }
     }
 
-    fn keys(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_keys(&mut self, _args: &[&str]) -> CommandResult {
         Ok((0..16).fold(String::new(), |out, key| {
-            if cpu.is_key_down(key) {
+            if self.cpu.is_key_down(key) {
                 out + &format!("{:0>4X} key", key)
             } else {
                 out
@@ -296,7 +315,7 @@ impl Chip8Debugger {
         }))
     }
 
-    fn listbrk(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_listbrk(&mut self, _args: &[&str]) -> CommandResult {
         if self.breaks.is_empty() {
             Ok("No breakpoints".into())
         } else {
@@ -307,70 +326,71 @@ impl Chip8Debugger {
         }
     }
 
-    fn load_rom(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_load_rom(&mut self, args: &[&str]) -> CommandResult {
         let buf = std::fs::read(args[0])?;
-        cpu.load_rom(&buf)?;
+        self.cpu.load_rom(&buf)?;
         self.has_rom = true;
         Ok("".into())
     }
 
-    fn mode(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_mode(&mut self, args: &[&str]) -> CommandResult {
         if !args.is_empty() {
             let mode = Chip8Mode::from_str(args[0])?;
-            let _ = std::mem::replace(cpu, CPU::new(mode));
+            self.cpu = CPU::new(mode);
             self.has_rom = false;
             self.paused = true;
             Ok("".into())
         } else {
-            Ok(format!("{}", cpu.mode))
+            Ok(format!("{}", self.cpu.mode))
         }
     }
 
-    fn next(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
-        cpu.disassemble_next()
+    fn cmd_next(&mut self, _args: &[&str]) -> CommandResult {
+        self.cpu
+            .disassemble_next()
             .ok_or("Unknown instruction ahead".into())
             .map(Into::into)
     }
 
-    fn pause(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_pause(&mut self, _args: &[&str]) -> CommandResult {
         self.paused = true;
         Ok("".into())
     }
 
-    fn read(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_read(&mut self, args: &[&str]) -> CommandResult {
         let pos = parse_int::<u16>(args[0])?;
-        let byte = cpu.read_memory_byte(pos)?;
+        let byte = self.cpu.read_memory_byte(pos)?;
         Ok(format!("0x{:0>2X}", byte))
     }
 
-    fn reboot(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
-        let _ = std::mem::replace(cpu, CPU::new(cpu.mode));
+    fn cmd_reboot(&mut self, _args: &[&str]) -> CommandResult {
+        self.cpu = CPU::new(self.cpu.mode);
         self.has_rom = false;
         self.paused = true;
         Ok("".into())
     }
 
-    fn recvkey(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_recvkey(&mut self, args: &[&str]) -> CommandResult {
         let key = parse_int::<u8>(args[0])?;
         if key > 16 {
             return Err(format!("Key 0x{:X} out of range; must be 0x0-0xF", key).into());
         }
-        cpu.press_key(key);
-        cpu.release_key(key);
+        self.cpu.press_key(key);
+        self.cpu.release_key(key);
         Ok("".into())
     }
 
-    fn regs(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_regs(&mut self, _args: &[&str]) -> CommandResult {
         let mut out = String::new();
-        for (reg, &val) in cpu.registers.iter() {
+        for (reg, &val) in self.cpu.registers.iter() {
             out += &format!("{} = {}", reg, val);
         }
-        out += &format!("PC = {}", cpu.pc);
-        out += &format!("Address = {}", cpu.index);
+        out += &format!("PC = {}", self.cpu.pc);
+        out += &format!("Address = {}", self.cpu.index);
         Ok(out)
     }
 
-    fn rembrk(&mut self, _cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_rembrk(&mut self, args: &[&str]) -> CommandResult {
         let brk = parse_int::<u16>(args[0])?;
         if self.breaks.remove(&brk) {
             Ok("".into())
@@ -379,60 +399,60 @@ impl Chip8Debugger {
         }
     }
 
-    fn resume(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_resume(&mut self, _args: &[&str]) -> CommandResult {
         self.paused = false;
         Ok("".into())
     }
 
-    fn setaddr(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_setaddr(&mut self, args: &[&str]) -> CommandResult {
         let val = parse_int::<u16>(args[0])?;
-        cpu.index = val;
+        self.cpu.index = val;
         Ok("".into())
     }
 
-    fn setreg(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_setreg(&mut self, args: &[&str]) -> CommandResult {
         let reg = parse_register(args[0]).ok_or(format!("Invalid register `{}`", args[0]))?;
         let byte = parse_int::<u8>(args[1])?;
-        cpu.registers[reg] = byte;
+        self.cpu.registers[reg] = byte;
         Ok("".into())
     }
 
-    fn step(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_step(&mut self, _args: &[&str]) -> CommandResult {
         if !self.has_rom {
             return Err(Box::new(Error::NoRomLoaded));
         }
-        cpu.step()?;
+        self.cpu.step()?;
         Ok("".into())
     }
 
-    fn timers(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+    fn cmd_timers(&mut self, _args: &[&str]) -> CommandResult {
         Ok(format!(
             "Delay timer: {}\nSound timer: {}",
-            cpu.delay_timer, cpu.sound_timer
+            self.cpu.delay_timer, self.cpu.sound_timer
         ))
     }
 
-    fn toggle_key(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_toggle_key(&mut self, args: &[&str]) -> CommandResult {
         let key = parse_int::<u8>(args[0])?;
         if key > 16 {
             return Err(format!("Key 0x{:X} out of range; must be 0x0-0xF", key).into());
         }
-        if cpu.is_key_down(key) {
-            cpu.release_key(key);
+        if self.cpu.is_key_down(key) {
+            self.cpu.release_key(key);
         } else {
-            cpu.press_key(key);
+            self.cpu.press_key(key);
         }
         Ok("".into())
     }
 
-    fn write(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+    fn cmd_write(&mut self, args: &[&str]) -> CommandResult {
         let pos = parse_int::<u16>(args[0])?;
         let byte = parse_int::<u8>(args[1])?;
-        cpu.write_memory_byte(pos, byte)?;
+        self.cpu.write_memory_byte(pos, byte)?;
         Ok("".into())
     }
 
-    pub fn execute_line(&mut self, cpu: &mut CPU, line: &str) -> CommandResult {
+    pub fn execute_debug_cmd(&mut self, line: &str) -> CommandResult {
         let mut split = line.split_whitespace();
         if let Some(cmd) = split.next() {
             if let Ok(cmd) = DebugCommand::from_str(cmd) {
@@ -440,7 +460,7 @@ impl Chip8Debugger {
                 let argc = args.len();
                 let target_args = &CMD_ARGC[cmd];
                 if target_args.contains(&argc) {
-                    (CMD_FUNCS[cmd])(self, cpu, &args)
+                    (CMD_FUNCS[cmd])(self, &args)
                 } else if argc < *target_args.start() {
                     Err(format!(
                         "Expected {} more arguments for `{}`.\nFor help, use `help`.",
@@ -455,24 +475,57 @@ impl Chip8Debugger {
                 Err(format!("Unknown command `{}`.\nFor help, use `help`.", cmd).into())
             }
         } else {
-            return Ok("".into());
+            Ok("".into())
         }
     }
 
-    pub fn emulate_until_breakpoints(&mut self, cpu: &mut CPU, dur: Duration) -> Result<(), Error> {
+    pub fn emulate_until_breakpoints(&mut self, dur: Duration) -> Result<(), Error> {
         if self.paused {
             return Ok(());
         }
         if !self.has_rom {
             return Err(Error::NoRomLoaded);
         }
-        cpu.emulate_for_until(dur, |cpu| self.breaks.contains(&cpu.pc))
+        self.cpu
+            .emulate_for_until(dur, |cpu| self.breaks.contains(&cpu.pc))
             .map_err(|err| match err {
                 Error::EarlyExitRequested => {
                     self.paused = true;
-                    Error::Breakpoint(cpu.pc)
+                    Error::Breakpoint(self.cpu.pc)
                 }
                 x => x,
             })
+    }
+}
+
+impl Default for Chip8Debugger {
+    fn default() -> Self {
+        Chip8Debugger::new(Chip8Mode::default())
+    }
+}
+
+impl std::ops::Deref for Chip8Debugger {
+    type Target = CPU;
+    fn deref(&self) -> &CPU {
+        &self.cpu
+    }
+}
+impl std::ops::DerefMut for Chip8Debugger {
+    fn deref_mut(&mut self) -> &mut CPU {
+        &mut self.cpu
+    }
+}
+
+impl From<CPU> for Chip8Debugger {
+    fn from(cpu: CPU) -> Self {
+        // Guesswork; if the PC's moved, there probably was a ROM loaded that it
+        // executed some code for.
+        let has_rom = cpu.pc != 0x200;
+        Chip8Debugger {
+            cpu,
+            breaks: BTreeSet::default(),
+            paused: true,
+            has_rom,
+        }
     }
 }
