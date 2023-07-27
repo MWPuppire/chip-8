@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
 #[cfg(not(feature = "xo-chip"))]
-const COLOR_SET: [u32; 2] = [0x00000000, 0x00FFFFFF];
+pub const COLOR_SET: [u32; 2] = [0x00000000, 0x00FFFFFF];
 #[cfg(feature = "xo-chip")]
-const COLOR_SET: [u32; 4] = [0x00000000, 0x00A9A9A9, 0x00545454, 0x00FFFFFF];
+pub const COLOR_SET: [u32; 4] = [0x00000000, 0x00A9A9A9, 0x00545454, 0x00FFFFFF];
 
 pub const LOWRES_SCREEN_WIDTH: usize = 64;
 pub const LOWRES_SCREEN_HEIGHT: usize = 32;

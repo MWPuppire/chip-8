@@ -1,3 +1,11 @@
+extern crate chip8_core;
+extern crate enum_map;
+extern crate funty;
+extern crate image;
+extern crate once_cell;
+extern crate strum;
+
+use chip8_core::display::{COLOR_SET, SCREEN_HEIGHT, SCREEN_WIDTH};
 use chip8_core::{Chip8Mode, Error, Register, CPU};
 use enum_map::{enum_map, EnumMap};
 use funty::Unsigned;
@@ -118,7 +126,7 @@ static CMD_HELP_TEXT: Lazy<EnumMap<DebugCommand, &'static str>> = Lazy::new(|| {
         DebugCommand::Backtrace => "backtrace - display the current call stack",
         DebugCommand::Brk => "brk <x> - halt when PC reaches <x>",
         DebugCommand::Disassemble => "disassemble [x] - disassemble the instruction at <x> or PC",
-        DebugCommand::DumpDisplay => "dump_display <file> - write the screen contents to JPEG <file>",
+        DebugCommand::DumpDisplay => "dump_display <file> [scale] - write the screen contents to <file>, optionally up-scaled",
         DebugCommand::DumpMemory => "dump_memory <file> - write memory contents to binary <file>",
         DebugCommand::Finish => "run until the current function returns",
         DebugCommand::Goto => "goto <x> - set PC to <x>",
@@ -165,7 +173,15 @@ static CMD_FUNCS: Lazy<EnumMap<DebugCommand, CommandBody>> = Lazy::new(|| {
         DebugCommand::Read => Chip8Debugger::read,
         DebugCommand::Reboot => Chip8Debugger::reboot,
         DebugCommand::RecvKey => Chip8Debugger::recvkey,
-        _ => todo!(),
+        DebugCommand::Regs => Chip8Debugger::regs,
+        DebugCommand::RemBrk => Chip8Debugger::rembrk,
+        DebugCommand::Resume => Chip8Debugger::resume,
+        DebugCommand::SetAddr => Chip8Debugger::setaddr,
+        DebugCommand::SetReg => Chip8Debugger::setreg,
+        DebugCommand::Step => Chip8Debugger::step,
+        DebugCommand::Timers => Chip8Debugger::timers,
+        DebugCommand::ToggleKey => Chip8Debugger::toggle_key,
+        DebugCommand::Write => Chip8Debugger::write,
     }
 });
 
@@ -202,8 +218,25 @@ impl Chip8Debugger {
         }
     }
 
-    fn dump_display(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
-        todo!();
+    fn dump_display(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let scale = if args.len() > 1 {
+            parse_int::<u32>(args[1])?
+        } else {
+            1
+        };
+        let buf = image::ImageBuffer::from_fn(
+            scale * SCREEN_WIDTH as u32,
+            scale * SCREEN_HEIGHT as u32,
+            |x, y| {
+                let pix = cpu
+                    .screen
+                    .read_pixel_unchecked((x / scale) as u8, (y / scale) as u8);
+                let color = COLOR_SET[pix];
+                image::Rgb([(color >> 16) as u8, (color >> 8) as u8, color as u8])
+            },
+        );
+        buf.save(args[0])?;
+        Ok("".into())
     }
 
     fn dump_memory(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
@@ -212,6 +245,9 @@ impl Chip8Debugger {
     }
 
     fn finish(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+        if !self.has_rom {
+            return Err(Box::new(Error::NoRomLoaded));
+        }
         let mut nested = 0;
         let mut cycles = 0;
         loop {
@@ -321,6 +357,78 @@ impl Chip8Debugger {
         }
         cpu.press_key(key);
         cpu.release_key(key);
+        Ok("".into())
+    }
+
+    fn regs(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+        let mut out = String::new();
+        for (reg, &val) in cpu.registers.iter() {
+            out += &format!("{} = {}\n", reg, val);
+        }
+        out += &format!("PC = {}\n", cpu.pc);
+        out += &format!("Address = {}\n", cpu.index);
+        Ok(out)
+    }
+
+    fn rembrk(&mut self, _cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let brk = parse_int::<u16>(args[0])?;
+        if self.breaks.remove(&brk) {
+            Ok("".into())
+        } else {
+            Err(format!("Breakpoint 0x{:0<4X} not set\n", brk).into())
+        }
+    }
+
+    fn resume(&mut self, _cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+        self.paused = false;
+        Ok("".into())
+    }
+
+    fn setaddr(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let val = parse_int::<u16>(args[0])?;
+        cpu.index = val;
+        Ok("".into())
+    }
+
+    fn setreg(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let reg = parse_register(args[0]).ok_or(format!("Invalid register `{}`", args[0]))?;
+        let byte = parse_int::<u8>(args[1])?;
+        cpu.registers[reg] = byte;
+        Ok("".into())
+    }
+
+    fn step(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+        if !self.has_rom {
+            return Err(Box::new(Error::NoRomLoaded));
+        }
+        cpu.step()?;
+        Ok("".into())
+    }
+
+    fn timers(&mut self, cpu: &mut CPU, _args: &[&str]) -> CommandResult {
+        Ok(format!(
+            "Delay timer: {}\nSound timer: {}\n",
+            cpu.delay_timer, cpu.sound_timer
+        ))
+    }
+
+    fn toggle_key(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let key = parse_int::<u8>(args[0])?;
+        if key > 16 {
+            return Err(format!("Key 0x{:X} out of range; must be 0x0-0xF", key).into());
+        }
+        if cpu.is_key_down(key) {
+            cpu.release_key(key);
+        } else {
+            cpu.press_key(key);
+        }
+        Ok("".into())
+    }
+
+    fn write(&mut self, cpu: &mut CPU, args: &[&str]) -> CommandResult {
+        let pos = parse_int::<u16>(args[0])?;
+        let byte = parse_int::<u8>(args[1])?;
+        cpu.write_memory_byte(pos, byte)?;
         Ok("".into())
     }
 
