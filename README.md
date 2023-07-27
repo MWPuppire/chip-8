@@ -34,3 +34,4 @@ Note that none of these tests specifically check for SUPER-CHIP and XO-CHIP inst
 * keys to pause, fast-forward, slow-motion, step forward
 * screen-shot and/or record keys
 * dialog to change emulator mode (i.e. Cosmac, SUPER-CHIP, XO-CHIP)
+* web frontend

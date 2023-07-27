@@ -194,6 +194,7 @@ pub struct Chip8Debugger {
 }
 
 impl Chip8Debugger {
+    #[inline]
     pub fn new(mode: Chip8Mode) -> Self {
         Chip8Debugger {
             cpu: CPU::new(mode),
@@ -328,8 +329,7 @@ impl Chip8Debugger {
 
     fn cmd_load_rom(&mut self, args: &[&str]) -> CommandResult {
         let buf = std::fs::read(args[0])?;
-        self.cpu.load_rom(&buf)?;
-        self.has_rom = true;
+        self.load_rom(&buf)?;
         Ok("".into())
     }
 
@@ -452,6 +452,13 @@ impl Chip8Debugger {
         Ok("".into())
     }
 
+    #[inline]
+    pub fn load_rom(&mut self, contents: &[u8]) -> Result<(), Error> {
+        self.cpu.load_rom(contents)?;
+        self.has_rom = true;
+        Ok(())
+    }
+
     pub fn execute_debug_cmd(&mut self, line: &str) -> CommandResult {
         let mut split = line.split_whitespace();
         if let Some(cmd) = split.next() {
@@ -499,6 +506,7 @@ impl Chip8Debugger {
 }
 
 impl Default for Chip8Debugger {
+    #[inline]
     fn default() -> Self {
         Chip8Debugger::new(Chip8Mode::default())
     }
@@ -506,17 +514,20 @@ impl Default for Chip8Debugger {
 
 impl std::ops::Deref for Chip8Debugger {
     type Target = CPU;
+    #[inline]
     fn deref(&self) -> &CPU {
         &self.cpu
     }
 }
 impl std::ops::DerefMut for Chip8Debugger {
+    #[inline]
     fn deref_mut(&mut self) -> &mut CPU {
         &mut self.cpu
     }
 }
 
 impl From<CPU> for Chip8Debugger {
+    #[inline]
     fn from(cpu: CPU) -> Self {
         // Guesswork; if the PC's moved, there probably was a ROM loaded that it
         // executed some code for.
