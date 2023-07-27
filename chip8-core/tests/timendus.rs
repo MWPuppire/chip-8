@@ -1,4 +1,4 @@
-use chip8_lib::*;
+use chip8_core::*;
 
 const SPLASH_ROM: &[u8] = include_bytes!("./timendus-tests/1-chip8-logo.ch8");
 const IBM_ROM: &[u8] = include_bytes!("./timendus-tests/2-ibm-logo.ch8");
