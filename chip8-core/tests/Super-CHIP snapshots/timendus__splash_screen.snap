@@ -1,5 +1,5 @@
 ---
-source: chip8-lib/tests/timendus.rs
+source: chip8-core/tests/timendus.rs
 expression: emu
 ---
 CPU {

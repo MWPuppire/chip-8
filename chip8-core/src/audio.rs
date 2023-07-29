@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
 // defaults to a ~440Hz (444.44) square wave
+#[cfg(feature = "xo-chip")]
 const PITCH_BIAS: f32 = 64.0;
 pub const SAMPLE_RATE: u32 = 48000;
 const CHIP8_AUDIO_BUFFER_SIZE: usize = 128;
@@ -43,7 +44,7 @@ pub struct Audio {
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Audio {
-    pitch: Option<f32>,
+    pitch: f32,
     #[cfg_attr(feature = "serde", serde(with = "BigArray"))]
     buffer: [f32; CHIP8_AUDIO_BUFFER_SIZE],
     next: usize,
@@ -59,7 +60,7 @@ impl Audio {
     #[inline]
     pub fn new() -> Self {
         Audio {
-            pitch: None,
+            pitch: PITCH_BIAS,
             buffer: DEFAULT_CHIP8_AUDIO_BUFFER,
             next: 0,
         }
@@ -68,7 +69,7 @@ impl Audio {
     #[cfg(feature = "xo-chip")]
     #[inline]
     pub(crate) fn set_pitch(&mut self, pitch: f32) {
-        self.pitch = Some(pitch);
+        self.pitch = pitch;
     }
 
     #[cfg(feature = "xo-chip")]
@@ -82,16 +83,16 @@ impl Audio {
 
     pub(crate) fn read_samples_to(&mut self, dur: Duration, buf: &mut [f32]) -> usize {
         #[cfg(feature = "xo-chip")]
-        let pitch = self.pitch.unwrap_or(PITCH_BIAS);
+        let freq = 4000.0 * 2.0f32.powf((self.pitch - PITCH_BIAS) / 48.0);
         #[cfg(not(feature = "xo-chip"))]
-        let pitch = PITCH_BIAS;
+        let freq = 4000.0;
+
         #[cfg(feature = "xo-chip")]
         let pattern = &self.buffer;
         #[cfg(not(feature = "xo-chip"))]
         let pattern = &DEFAULT_CHIP8_AUDIO_BUFFER;
 
         let mut next = self.next;
-        let freq = 4000.0 * 2.0f32.powf((pitch - PITCH_BIAS) / 48.0);
         let samples = (SAMPLE_RATE as f64 * dur.as_secs_f64()) as usize;
         assert!(buf.len() >= samples);
         for sample in buf.iter_mut().take(samples) {

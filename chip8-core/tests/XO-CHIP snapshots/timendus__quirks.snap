@@ -1,5 +1,5 @@
 ---
-source: chip8-lib/tests/timendus.rs
+source: chip8-core/tests/timendus.rs
 expression: emu
 ---
 CPU {
@@ -81962,7 +81962,7 @@ CPU {
     delay_timer: 180,
     sound_timer: 0,
     audio: Audio {
-        pitch: None,
+        pitch: 64.0,
         buffer: [
             1.0,
             1.0,
